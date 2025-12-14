@@ -1,15 +1,16 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, BarChart2, Activity, Briefcase, Zap, FileText, PieChart, LogOut, User as UserIcon, Package, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Login } from './Login';
+import { IconLogo } from './Icon';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const location = useLocation();
     const { isAuthenticated, logout, user } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // If not authenticated, show Login (Authentication Gate)
     if (!isAuthenticated) {
         return <Login />;
     }
@@ -36,10 +37,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             `}>
                 <div className="p-6 flex items-center justify-between border-b border-slate-700">
                     <div className="flex items-center space-x-3 space-x-reverse">
-                        <Briefcase className="w-8 h-8 text-blue-400" />
+                        <div className="bg-blue-600 p-1.5 rounded-lg">
+                            <IconLogo className="w-6 h-6 text-white" />
+                        </div>
                         <div>
-                            <h1 className="text-xl font-bold tracking-wider">مدیر ساخت</h1>
-                            <p className="text-xs text-slate-400">سیستم هوشمند پروژه</p>
+                            <h1 className="text-xl font-bold tracking-wider">سازیار</h1>
+                            <p className="text-[10px] text-slate-400">دستیار هوشمند ساخت</p>
                         </div>
                     </div>
                     {/* Close button for mobile */}
@@ -50,7 +53,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 
                 <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                     <div className="text-xs text-slate-500 px-4 mb-2">مدیریت کلان</div>
-                    <Link onClick={closeSidebar} to="/" className={`flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-lg transition-colors ${isActive('/')}`}>
+                    <Link onClick={closeSidebar} to="/dashboard" className={`flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-lg transition-colors ${isActive('/dashboard')}`}>
                         <Home className="w-5 h-5" />
                         <span>داشبورد وضعیت</span>
                     </Link>
@@ -116,7 +119,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                             <Menu className="w-6 h-6" />
                         </button>
                         <h2 className="text-base sm:text-lg font-semibold text-gray-800 truncate">
-                            {location.pathname === '/' && 'داشبورد مدیریت'}
+                            {location.pathname === '/dashboard' && 'داشبورد مدیریت'}
                             {location.pathname === '/tasks' && 'مدیریت فعالیت‌ها'}
                             {location.pathname === '/resources' && 'منابع و هزینه‌ها'}
                             {location.pathname === '/gantt' && 'زمان‌بندی (MSP)'}

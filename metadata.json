@@ -1,6 +1,6 @@
 {
-  "name": "building AI (Project Manager)",
-  "description": "A comprehensive construction project management app featuring Gantt charts, material cost analysis, and Gemini-powered smart insights.",
+  "name": "Sazyar (Construction Assistant)",
+  "description": "سازیار: دستیار هوشمند مدیریت پروژه ساختمانی. پلتفرم جامع برای پیمانکاران و کارفرمایان با تحلیل‌های هوش مصنوعی.",
   "requestFramePermissions": [
     "microphone"
   ]
