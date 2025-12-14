@@ -1,0 +1,203 @@
+
+import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
+import { Project, Task, Resource, ProjectDetails } from '../types';
+
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+const COMPLEX_MODEL = 'gemini-2.5-flash';
+const FAST_MODEL = 'gemini-2.0-flash-lite';
+
+export const createChatSession = (): Chat => {
+    return ai.chats.create({
+        model: COMPLEX_MODEL,
+        config: {
+            systemInstruction: `شما "مدیر هوشمند پروژه" هستید.
+            تخصص: مدیریت پیمان، شرایط عمومی پیمان، تحلیل تاخیرات، تعدیل و صورت وضعیت.
+            دسترسی به داده‌های پروژه شامل WBS، منابع، ابعاد پروژه، نوع قرارداد و پیشرفت واقعی دارید.
+            در تحلیل‌ها، نوع سازه، منطقه جغرافیایی و ریسک‌های مالی را همزمان در نظر بگیرید.`,
+        }
+    });
+};
+
+export const quickCheckTask = async (taskTitle: string, duration: number, projectDetails?: ProjectDetails): Promise<string> => {
+    try {
+        let contextPrompt = "";
+        if (projectDetails) {
+            contextPrompt = `
+            مشخصات پروژه:
+            - نوع سازه: ${projectDetails.dimensions.structureType}
+            - تعداد طبقات: ${projectDetails.dimensions.floors}
+            - متراژ زیربنا: ${projectDetails.dimensions.infrastructureArea} مترمربع
+            - محل پروژه: ${projectDetails.location.zoneType} (${projectDetails.location.address})
+            - سیستم اجرا: ${projectDetails.design.facadeType} / ${projectDetails.design.roofType}
+            `;
+        }
+
+        const prompt = `
+        نقش: مدیر ارشد کنترل پروژه.
+        ${contextPrompt}
+        
+        سوال: آیا فعالیت "${taskTitle}" با مدت زمان "${duration} روز" برای پروژه‌ای با مشخصات بالا منطقی است؟
+        
+        پاسخ را کوتاه و فارسی بده شامل:
+        1. تایید یا رد منطقی بودن زمان (با توجه به متراژ و حجم کار).
+        2. یک ریسک فنی یا اجرایی خاص این فعالیت در این نوع پروژه.
+        3. پیشنهاد اصلاحی (اگر نیاز است).
+        `;
+
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model: FAST_MODEL,
+            contents: prompt,
+        });
+        return response.text || "خطا در دریافت پاسخ.";
+    } catch (error) {
+        return "سرویس در دسترس نیست.";
+    }
+};
+
+/**
+ * Section F: Full Scenario Simulation
+ */
+export const simulateScenario = async (
+    project: Project,
+    scenarioDescription: string
+): Promise<{ 
+    impactDescription: string, 
+    costDelta: number, 
+    timeDelta: number, 
+    recommendedActions: string[] 
+}> => {
+    const projectSummary = {
+        name: project.name,
+        details: project.details, // Include full details (Dimensions, Location, Contract etc.)
+        totalTasks: project.tasks.length,
+        currentRiskScore: project.projectRiskScore,
+        criticalTasks: project.tasks.filter(t => t.isCritical || t.riskLevel === 'High').map(t => ({ title: t.title, responsible: t.responsible })),
+        resources: project.resources.map(r => ({ name: r.name, cost: r.costRate, type: r.type }))
+    };
+
+    const prompt = `
+    تحلیل سناریوی پیشرفته پروژه ساختمانی (Simulation):
+    
+    سناریو: "${scenarioDescription}"
+    
+    مشخصات کامل پروژه: ${JSON.stringify(projectSummary)}
+    
+    وظیفه:
+    1. تاثیر این سناریو بر هزینه کل (تخمین عدد). با توجه به متراژ و نوع قرارداد.
+    2. تاثیر بر زمان اتمام پروژه (تخمین روز).
+    3. اقدامات اصلاحی (Mitigation Plan).
+    
+    خروجی را حتماً به فرمت JSON معتبر زیر برگردان:
+    {
+        "impactDescription": "توضیح متنی کامل و تحلیلی",
+        "costDelta": number (افزایش/کاهش به تومان),
+        "timeDelta": number (افزایش/کاهش به روز),
+        "recommendedActions": ["action1", "action2"]
+    }
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: COMPLEX_MODEL,
+            contents: prompt,
+            config: { responseMimeType: 'application/json' }
+        });
+        
+        const text = response.text;
+        return JSON.parse(text || "{}");
+    } catch (error) {
+        console.error("Simulation Error", error);
+        return {
+            impactDescription: "خطا در پردازش سناریو",
+            costDelta: 0,
+            timeDelta: 0,
+            recommendedActions: ["بررسی دستی سناریو"]
+        };
+    }
+};
+
+/**
+ * Section D & E: AI Risk Analysis & Alerts
+ */
+export const analyzeProjectRisks = async (project: Project): Promise<any> => {
+    const tasksData = project.tasks.map(t => ({
+        id: t.id,
+        name: t.title,
+        status: t.status,
+        duration: t.duration,
+        progress: t.percentComplete,
+        priority: t.priority,
+        isCritical: t.isCritical
+    }));
+
+    // Pass project details to AI for better context (e.g. Structure Type affects risks)
+    const context = {
+        details: project.details,
+        tasks: tasksData
+    };
+
+    const prompt = `
+    به عنوان یک متخصص کنترل پروژه، داده‌های زیر را تحلیل کن و خروجی JSON بده:
+    1. projectScore (0 تا 100، 100 یعنی عالی).
+    2. alerts: لیستی از هشدارها (type: Delay/Cost/Risk, severity: info/warning/critical, message).
+    3. criticalPathSuggestion: متنی کوتاه درباره مسیر بحرانی.
+
+    Project Context: ${JSON.stringify(context)}
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: COMPLEX_MODEL,
+            contents: prompt,
+            config: { responseMimeType: 'application/json' }
+        });
+        return JSON.parse(response.text || "{}");
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+/**
+ * Resource Estimation
+ */
+export const suggestProjectResources = async (project: Project): Promise<any[]> => {
+    const context = {
+        details: project.details,
+        tasks: project.tasks.map(t => t.title)
+    };
+
+    const prompt = `
+    به عنوان مهندس متره و برآورد، بر اساس مشخصات پروژه زیر، لیست منابع اصلی (مصالح، ماشین‌آلات، نیروی انسانی) مورد نیاز را پیشنهاد بده.
+    
+    مشخصات پروژه:
+    - نوع: ${project.details.dimensions.structureType}
+    - متراژ: ${project.details.dimensions.infrastructureArea} مترمربع
+    - طبقات: ${project.details.dimensions.floors}
+    - لیست فعالیت‌ها: ${JSON.stringify(context.tasks)}
+
+    خروجی باید یک آرایه JSON باشد که هر آیتم شامل موارد زیر است:
+    {
+        "name": "نام منبع (مثلا سیمان تیپ 2)",
+        "type": "Material" | "Work" | "Equipment",
+        "unit": "واحد (تن، مترمکعب، ساعت...)",
+        "estimatedRate": number (قیمت واحد تخمینی به تومان - تقریبی بازار ایران),
+        "reason": "دلیل پیشنهاد (مثلا برای فونداسیون)"
+    }
+    
+    حداقل 5 و حداکثر 10 مورد مهم پیشنهاد بده.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: COMPLEX_MODEL,
+            contents: prompt,
+            config: { responseMimeType: 'application/json' }
+        });
+        return JSON.parse(response.text || "[]");
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+};

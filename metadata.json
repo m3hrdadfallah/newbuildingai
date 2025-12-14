@@ -1,0 +1,7 @@
+{
+  "name": "building AI (Project Manager)",
+  "description": "A comprehensive construction project management app featuring Gantt charts, material cost analysis, and Gemini-powered smart insights.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
