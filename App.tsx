@@ -14,6 +14,9 @@ import { AIChat } from './components/AIChat';
 import { ResourcesPage } from './components/ResourcesPage';
 import { UpgradePage } from './components/UpgradePage';
 import { UserProfile } from './components/UserProfile';
+import { auth, db } from './firebase';
+import { signUp, signIn } from './auth';
+import { saveUserData } from './db';
 
 const App: React.FC = () => {
     return (
