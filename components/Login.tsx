@@ -41,19 +41,39 @@ export const Login: React.FC = () => {
         setLoading(false);
     };
 
+    // Helper for error messages
+    const handleAuthError = (err: any) => {
+        console.error("Auth Error Details:", err);
+        setLoading(false);
+
+        const errorCode = err.code;
+        const errorMessage = err.message || '';
+
+        if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+            setError('ایمیل یا رمز عبور اشتباه است.');
+        } else if (errorCode === 'auth/email-already-in-use') {
+            setError('این ایمیل قبلا ثبت شده است.');
+        } else if (errorCode === 'auth/weak-password') {
+            setError('رمز عبور باید حداقل ۶ کاراکتر باشد.');
+        } else if (errorCode === 'auth/operation-not-allowed' || errorMessage.includes('blocked') || errorMessage.includes('IdentityToolkit')) {
+            // This captures the exact error user is seeing
+            setError('خطای تنظیمات: سرویس "Email/Password" یا "Google" در پنل فایربیس فعال نشده است. لطفا به بخش Authentication > Sign-in method بروید.');
+        } else if (errorCode === 'auth/popup-closed-by-user') {
+            setError('پنجره ورود بسته شد.');
+        } else if (errorCode === 'auth/too-many-requests') {
+            setError('تعداد درخواست‌ها زیاد است. لطفا دقایقی دیگر تلاش کنید.');
+        } else {
+            setError(errorMessage || 'خطایی رخ داده است. لطفا اتصال اینترنت را بررسی کنید.');
+        }
+    };
+
     const handleGoogleLogin = async () => {
         resetState();
         setLoading(true);
         try {
             await signInWithGoogle();
         } catch (err: any) {
-            console.error("Google Login Error:", err);
-            setLoading(false);
-            if (err.code === 'auth/popup-closed-by-user') {
-                setError('پنجره ورود بسته شد.');
-            } else {
-                setError('خطا در اتصال به گوگل.');
-            }
+            handleAuthError(err);
         }
     };
 
@@ -72,15 +92,17 @@ export const Login: React.FC = () => {
                 await registerWithEmail(email, password, fullName);
             } else if (mode === 'forgot') {
                 await resetPassword(email);
-                setSuccessMsg('لینک بازیابی رمز عبور ارسال شد.');
+                setSuccessMsg('لینک بازیابی رمز عبور به ایمیل شما ارسال شد.');
                 setLoading(false);
             }
         } catch (err: any) {
-            setLoading(false);
-            if (err.code === 'auth/invalid-credential') setError('ایمیل یا رمز عبور اشتباه است.');
-            else if (err.code === 'auth/email-already-in-use') setError('این ایمیل قبلا ثبت شده است.');
-            else if (err.code === 'auth/weak-password') setError('رمز عبور ضعیف است.');
-            else setError(err.message || 'خطایی رخ داده است.');
+            // Handle manual validation errors
+            if (err.message === "لطفا نام و نام خانوادگی را وارد کنید.") {
+                setError(err.message);
+                setLoading(false);
+            } else {
+                handleAuthError(err);
+            }
         }
     };
 
@@ -107,9 +129,7 @@ export const Login: React.FC = () => {
             setMode('verify-otp');
             setLoading(false);
         } catch (err: any) {
-            setLoading(false);
-            console.error(err);
-            setError('خطا در ارسال پیامک. لطفا مجدد تلاش کنید یا از ورود با گوگل استفاده کنید.');
+            handleAuthError(err);
             if (window.recaptchaVerifier) {
                 window.recaptchaVerifier.clear();
                 window.recaptchaVerifier = undefined;
@@ -149,8 +169,8 @@ export const Login: React.FC = () => {
 
                 <div id="recaptcha-container" className="flex justify-center mb-4"></div>
 
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2"><AlertCircle className="w-4 h-4" />{error}</div>}
-                {successMsg && <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2"><Check className="w-4 h-4" />{successMsg}</div>}
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 leading-relaxed"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
+                {successMsg && <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2"><Check className="w-4 h-4 shrink-0" />{successMsg}</div>}
 
                 {/* Primary Methods: Google & Phone */}
                 {(mode === 'login' || mode === 'register') && (
