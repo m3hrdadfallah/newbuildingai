@@ -4,12 +4,13 @@ import { auth } from '../firebase';
 import { onAuthStateChanged } from "firebase/auth";
 import { signOut } from '../services/authService';
 import { getUserData, saveUserData } from '../services/firestoreService';
+import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
     logout: () => void;
-    handleMockPayment: () => void; // Keeping for upgrade simulation logic
+    handleMockPayment: () => void;
     isAuthenticated: boolean;
 }
 
@@ -22,26 +23,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                // User is signed in
-                const userData = await getUserData(firebaseUser.uid);
-                
-                if (userData) {
-                    setUser({ ...userData, id: firebaseUser.uid });
-                } else {
-                    // New user, create default profile in Firestore
-                    const newUser: User = {
-                        id: firebaseUser.uid,
-                        username: firebaseUser.email || 'user',
-                        name: firebaseUser.displayName || 'کاربر جدید',
-                        role: 'Viewer',
-                        plan: 'Free',
-                        quota: { used: 0, limit: 20 }
-                    };
-                    await saveUserData(firebaseUser.uid, newUser);
-                    setUser(newUser);
+                try {
+                    const userData = await getUserData(firebaseUser.uid);
+                    if (userData) {
+                        setUser({ ...userData, id: firebaseUser.uid });
+                    } else {
+                        const newUser: User = {
+                            id: firebaseUser.uid,
+                            username: firebaseUser.email || 'user',
+                            name: firebaseUser.displayName || 'کاربر جدید',
+                            role: 'Viewer',
+                            plan: 'Free',
+                            quota: { used: 0, limit: 20 }
+                        };
+                        await saveUserData(firebaseUser.uid, newUser);
+                        setUser(newUser);
+                    }
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
                 }
             } else {
-                // User is signed out
                 setUser(null);
             }
             setLoading(false);
@@ -67,7 +68,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             };
             setUser(updatedUser);
-            // Save subscription status to Firestore
             saveUserData(auth.currentUser.uid, {
                  plan: 'Pro',
                  subscriptionExpiry: updatedUser.subscriptionExpiry,
@@ -76,9 +76,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    if (loading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium">در حال اتصال به سازیار...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <AuthContext.Provider value={{ user, loading, logout, handleMockPayment, isAuthenticated: !!user }}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };

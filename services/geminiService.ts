@@ -1,13 +1,25 @@
-
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Safely access API key. Note: In Vite, process.env.API_KEY is replaced by define in vite.config.ts.
+// If not defined, it might be undefined.
+const apiKey = process.env.API_KEY;
+
+// Only initialize if key exists to prevent crash on load
+let ai: GoogleGenAI | null = null;
+if (apiKey) {
+    try {
+        ai = new GoogleGenAI({ apiKey });
+    } catch (e) {
+        console.error("Failed to initialize Gemini:", e);
+    }
+}
 
 const COMPLEX_MODEL = 'gemini-2.5-flash';
 const FAST_MODEL = 'gemini-2.0-flash-lite';
 
-export const createChatSession = (): Chat => {
+export const createChatSession = (): Chat | null => {
+    if (!ai) return null;
     return ai.chats.create({
         model: COMPLEX_MODEL,
         config: {
@@ -20,6 +32,8 @@ export const createChatSession = (): Chat => {
 };
 
 export const quickCheckTask = async (taskTitle: string, duration: number, projectDetails?: ProjectDetails): Promise<string> => {
+    if (!ai) return "سرویس هوش مصنوعی غیرفعال است (API Key یافت نشد).";
+    
     try {
         let contextPrompt = "";
         if (projectDetails) {
@@ -51,6 +65,7 @@ export const quickCheckTask = async (taskTitle: string, duration: number, projec
         });
         return response.text || "خطا در دریافت پاسخ.";
     } catch (error) {
+        console.error(error);
         return "سرویس در دسترس نیست.";
     }
 };
@@ -67,6 +82,13 @@ export const simulateScenario = async (
     timeDelta: number, 
     recommendedActions: string[] 
 }> => {
+    if (!ai) return {
+        impactDescription: "سرویس هوش مصنوعی تنظیم نشده است.",
+        costDelta: 0,
+        timeDelta: 0,
+        recommendedActions: []
+    };
+
     const projectSummary = {
         name: project.name,
         details: project.details, // Include full details (Dimensions, Location, Contract etc.)
@@ -121,6 +143,8 @@ export const simulateScenario = async (
  * Section D & E: AI Risk Analysis & Alerts
  */
 export const analyzeProjectRisks = async (project: Project): Promise<any> => {
+    if (!ai) return null;
+
     const tasksData = project.tasks.map(t => ({
         id: t.id,
         name: t.title,
@@ -163,6 +187,8 @@ export const analyzeProjectRisks = async (project: Project): Promise<any> => {
  * Resource Estimation
  */
 export const suggestProjectResources = async (project: Project): Promise<any[]> => {
+    if (!ai) return [];
+
     const context = {
         details: project.details,
         tasks: project.tasks.map(t => t.title)
