@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind directives removed to prevent build errors. Using CDN in index.html */
 
 :root {
   font-family: 'Vazirmatn', system-ui, sans-serif;
@@ -13,4 +11,41 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; 
+}
+
+@media print {
+  aside, header, .no-print {
+      display: none !important;
+  }
+  main {
+      overflow: visible !important;
+      height: auto !important;
+  }
+  body {
+      background-color: white;
+  }
+}
+
+.gradient-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, #2563eb, #4f46e5);
 }
