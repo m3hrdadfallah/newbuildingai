@@ -44,6 +44,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             const newUser: User = {
                                 id: firebaseUser.uid,
                                 username: username,
+                                email: firebaseUser.email || undefined,
+                                phoneNumber: firebaseUser.phoneNumber || undefined,
                                 name: displayName,
                                 role: 'Viewer',
                                 plan: 'Free',

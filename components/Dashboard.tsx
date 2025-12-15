@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { analyzeProjectRisks } from '../services/geminiService';
-import { Activity, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles, Upload, Download, Save } from 'lucide-react';
+import { Activity, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles, Upload, Download, Save, FileInput } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
     const { currentProject, updateProjectAnalysis, saveProject, importProject, exportProjectJSON } = useProject();
@@ -79,11 +79,11 @@ export const Dashboard: React.FC = () => {
                     />
                     <button 
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
-                        title="بارگذاری فایل پروژه (JSON)"
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-100 text-sm font-bold transition-colors shadow-sm"
+                        title="بارگذاری فایل پروژه (JSON) از نرم‌افزارهای دیگر"
                     >
                         <Upload className="w-4 h-4" />
-                        <span className="hidden sm:inline">ورود اطلاعات</span>
+                        <span>وارد کردن پروژه</span>
                     </button>
                     <button 
                         onClick={exportProjectJSON}
