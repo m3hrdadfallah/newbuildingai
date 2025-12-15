@@ -1,11 +1,10 @@
-
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const COMPLEX_MODEL = 'gemini-2.5-flash';
-const FAST_MODEL = 'gemini-2.0-flash-lite';
+const COMPLEX_MODEL = 'gemini-3-pro-preview';
+const FAST_MODEL = 'gemini-2.5-flash';
 
 export const createChatSession = (): Chat => {
     return ai.chats.create({
@@ -51,13 +50,11 @@ export const quickCheckTask = async (taskTitle: string, duration: number, projec
         });
         return response.text || "خطا در دریافت پاسخ.";
     } catch (error) {
+        console.error(error);
         return "سرویس در دسترس نیست.";
     }
 };
 
-/**
- * Section F: Full Scenario Simulation
- */
 export const simulateScenario = async (
     project: Project,
     scenarioDescription: string
@@ -69,7 +66,7 @@ export const simulateScenario = async (
 }> => {
     const projectSummary = {
         name: project.name,
-        details: project.details, // Include full details (Dimensions, Location, Contract etc.)
+        details: project.details, 
         totalTasks: project.tasks.length,
         currentRiskScore: project.projectRiskScore,
         criticalTasks: project.tasks.filter(t => t.isCritical || t.riskLevel === 'High').map(t => ({ title: t.title, responsible: t.responsible })),
@@ -117,9 +114,6 @@ export const simulateScenario = async (
     }
 };
 
-/**
- * Section D & E: AI Risk Analysis & Alerts
- */
 export const analyzeProjectRisks = async (project: Project): Promise<any> => {
     const tasksData = project.tasks.map(t => ({
         id: t.id,
@@ -131,7 +125,6 @@ export const analyzeProjectRisks = async (project: Project): Promise<any> => {
         isCritical: t.isCritical
     }));
 
-    // Pass project details to AI for better context (e.g. Structure Type affects risks)
     const context = {
         details: project.details,
         tasks: tasksData
@@ -159,9 +152,6 @@ export const analyzeProjectRisks = async (project: Project): Promise<any> => {
     }
 };
 
-/**
- * Resource Estimation
- */
 export const suggestProjectResources = async (project: Project): Promise<any[]> => {
     const context = {
         details: project.details,

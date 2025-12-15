@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, Activity, Briefcase, Zap, FileText, PieChart, LogOut, User as UserIcon, Package, Menu, X } from 'lucide-react';
+import { Link, useLocation, Outlet } from 'react-router-dom';
+import { Home, BarChart2, Activity, Zap, FileText, PieChart, LogOut, User as UserIcon, Package, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Login } from './Login';
 import { IconLogo } from './Icon';
+import { AIChat } from './AIChat';
 
-export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Layout: React.FC = () => {
     const location = useLocation();
     const { isAuthenticated, logout, user } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,6 +19,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     const isActive = (path: string) => location.pathname === path ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-slate-700 hover:text-white';
 
     const closeSidebar = () => setSidebarOpen(false);
+
+    // Helper to get initials
+    const getInitials = () => {
+        if (user?.name && user.name !== 'کاربر جدید') return user.name.charAt(0);
+        if (user?.username && !user.username.startsWith('+')) return user.username.charAt(0).toUpperCase();
+        return 'U';
+    };
 
     return (
         <div className="flex h-screen overflow-hidden bg-gray-100 font-[Vazirmatn]">
@@ -131,15 +139,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                         </h2>
                     </div>
                     <div className="flex items-center space-x-4 space-x-reverse shrink-0">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 text-sm">
-                            {user?.username.charAt(0).toUpperCase()}
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 text-sm font-bold">
+                            {getInitials()}
                         </div>
                         <span className="text-sm font-medium text-gray-600 hidden sm:inline">{user?.name}</span>
                     </div>
                 </header>
                 <div className="p-4 sm:p-6 flex-1">
-                    {children}
+                    <Outlet />
                 </div>
+                {/* Floating AI Chat */}
+                <AIChat />
             </main>
         </div>
     );

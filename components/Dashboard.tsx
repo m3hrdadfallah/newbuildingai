@@ -1,18 +1,19 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useProject } from '../context/ProjectContext';
+import { useAuth } from '../context/AuthContext';
 import { analyzeProjectRisks } from '../services/geminiService';
-import { Activity, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles } from 'lucide-react';
+import { Activity, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles, Upload, Download, Save, Smartphone, Mail, Globe } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-    const { currentProject, updateProjectAnalysis } = useProject();
+    const { currentProject, updateProjectAnalysis, saveProject, importProject, exportProjectJSON } = useProject();
+    const { user } = useAuth();
     const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const refreshAnalysis = async () => {
         setLoadingAnalysis(true);
         const result = await analyzeProjectRisks(currentProject);
         if (result) {
-            // Map AI result to our internal types
             const alerts = result.alerts.map((a: any, idx: number) => ({
                 id: `ai-${Date.now()}-${idx}`,
                 type: a.type,
@@ -25,25 +26,75 @@ export const Dashboard: React.FC = () => {
         setLoadingAnalysis(false);
     };
 
-    // Calculate Total Budget (BAC)
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const json = JSON.parse(event.target?.result as string);
+                importProject(json);
+            } catch (err) {
+                console.error("Error parsing JSON", err);
+                alert("فرمت فایل نامعتبر است.");
+            }
+        };
+        reader.readAsText(file);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     const totalBudget = currentProject.tasks.reduce((acc, task) => {
         const resourceCost = task.resources.reduce((tRes, res) => {
             const resourceInfo = currentProject.resources.find(r => r.id === res.resourceId);
             return tRes + (resourceInfo ? resourceInfo.costRate * res.quantity : 0);
         }, 0);
-        
-        // If user entered a manual budget (fixedCost), use it. Else use resource sum.
         const taskBac = task.fixedCost !== undefined ? task.fixedCost : resourceCost;
         return acc + taskBac;
     }, 0);
 
-    // Calculate Physical Progress Weighted (simplified for dashboard)
     const totalProgress = currentProject.tasks.length > 0 
         ? Math.round(currentProject.tasks.reduce((acc, t) => acc + t.percentComplete, 0) / currentProject.tasks.length) 
         : 0;
 
+    // Helper to determine login icon
+    const getLoginIcon = () => {
+        if (user?.phoneNumber) return <Smartphone className="w-4 h-4" />;
+        if (user?.email && !user.name?.includes('کاربر')) return <Globe className="w-4 h-4" />; // Assume Google if complex name? simplified assumption
+        return <Mail className="w-4 h-4" />;
+    };
+
     return (
         <div className="space-y-6">
+            {/* User Welcome Card */}
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                 <div>
+                    <h2 className="text-xl font-bold mb-1">سلام، {user?.name || 'کاربر گرامی'}</h2>
+                    <p className="text-slate-400 text-sm flex items-center gap-2">
+                        <span className="opacity-70">روش ورود شما:</span>
+                        <span className="bg-slate-700 px-3 py-1 rounded-full text-white font-mono text-xs dir-ltr flex items-center gap-2 border border-slate-600">
+                            {getLoginIcon()}
+                            {user?.email || user?.phoneNumber || 'ناشناس'}
+                        </span>
+                    </p>
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={saveProject} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow transition-colors flex items-center gap-2">
+                        <Save className="w-4 h-4" />
+                        ذخیره تغییرات
+                    </button>
+                    <button onClick={exportProjectJSON} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm shadow transition-colors flex items-center gap-2">
+                        <Download className="w-4 h-4" />
+                        خروجی
+                    </button>
+                    <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileUpload} />
+                    <button onClick={() => fileInputRef.current?.click()} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm shadow transition-colors flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        بارگذاری
+                    </button>
+                </div>
+            </div>
+
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
@@ -104,17 +155,18 @@ export const Dashboard: React.FC = () => {
                     <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                         <h3 className="font-bold text-gray-800 flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-purple-500" />
-                            هشدارهای هوشمند (Gemini Analysis)
+                            هوش مصنوعی جمنای (Gemini Analysis)
                         </h3>
                         <button 
                             onClick={refreshAnalysis} 
                             disabled={loadingAnalysis}
-                            className="text-xs bg-white border border-gray-300 px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="text-xs bg-white border border-gray-300 px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
                         >
-                            {loadingAnalysis ? 'در حال تحلیل...' : 'بروزرسانی تحلیل'}
+                            {loadingAnalysis ? <span className="animate-spin">⌛</span> : <Sparkles className="w-3 h-3" />}
+                            {loadingAnalysis ? 'در حال تحلیل...' : 'تحلیل مجدد'}
                         </button>
                     </div>
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
                         {currentProject.aiAlerts && currentProject.aiAlerts.length > 0 ? (
                             currentProject.aiAlerts.map(alert => (
                                 <div key={alert.id} className="p-4 flex gap-4 hover:bg-gray-50 transition-colors">
@@ -139,20 +191,22 @@ export const Dashboard: React.FC = () => {
                                 </div>
                             ))
                         ) : (
-                            <div className="p-8 text-center text-gray-400">
-                                هیچ هشداری یافت نشد. وضعیت پروژه نرمال است.
+                            <div className="p-12 text-center text-gray-400 flex flex-col items-center">
+                                <Sparkles className="w-10 h-10 text-gray-200 mb-2" />
+                                <p>هنوز هشداری ثبت نشده است.</p>
+                                <p className="text-xs mt-1">برای دریافت تحلیل هوشمند، روی دکمه "تحلیل مجدد" کلیک کنید.</p>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* Project Info */}
-                <div className="bg-slate-800 text-white rounded-xl shadow-lg p-6">
+                <div className="bg-slate-800 text-white rounded-xl shadow-lg p-6 flex flex-col">
                     <h3 className="font-bold text-lg mb-4">{currentProject.name}</h3>
-                    <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+                    <p className="text-slate-300 text-sm mb-6 leading-relaxed flex-1">
                         {currentProject.description}
                     </p>
-                    <div className="space-y-4">
+                    <div className="space-y-4 mt-auto">
                         <div className="flex justify-between items-center text-sm border-b border-slate-700 pb-2">
                             <span className="text-slate-400">تعداد فعالیت‌ها</span>
                             <span className="font-mono">{currentProject.tasks.length}</span>

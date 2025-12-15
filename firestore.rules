@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // قوانین دسترسی به کالکشن کاربران
+    // هر کاربر فقط می‌تواند داکیومنت مربوط به آیدی خودش را بخواند یا بنویسد
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // بستن دسترسی به سایر بخش‌ها برای امنیت
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

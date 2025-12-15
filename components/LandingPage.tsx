@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { IconLogo } from './Icon';
-import { Sparkles, Activity, Shield, BarChart3, Clock, Users, ArrowLeft, BrainCircuit, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Activity, Shield, BarChart3, Clock, Users, ArrowLeft, BrainCircuit } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
   return (
