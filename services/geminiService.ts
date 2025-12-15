@@ -3,8 +3,8 @@ import { Project, Task, Resource, ProjectDetails } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const COMPLEX_MODEL = 'gemini-3-pro-preview';
-const FAST_MODEL = 'gemini-2.5-flash';
+const COMPLEX_MODEL = "gemini-2.5-flash";
+const FAST_MODEL = "gemini-2.0-flash-lite";
 
 export const createChatSession = (): Chat => {
     return ai.chats.create({
