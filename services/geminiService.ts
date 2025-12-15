@@ -4,14 +4,14 @@ import { Project, Task, Resource, ProjectDetails } from '../types';
 // Ensure API Key exists
 const apiKey = process.env.API_KEY;
 if (!apiKey) {
-  console.error("Gemini API Key is missing. Please check your environment variables (API_KEY or GEMINI_API_KEY).");
+  console.warn("Gemini API Key is missing. Using fallback/dummy key. Requests will fail.");
 }
 
-const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key-to-prevent-crash' });
+const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
 
-// Use stable aliases from documentation
+// Use gemini-2.5-flash for all tasks to ensure stability and compliance
 const COMPLEX_MODEL = "gemini-2.5-flash";
-const FAST_MODEL = "gemini-flash-lite-latest"; 
+const FAST_MODEL = "gemini-2.5-flash"; 
 
 export const createChatSession = (): Chat => {
     return ai.chats.create({
@@ -58,7 +58,7 @@ export const quickCheckTask = async (taskTitle: string, duration: number, projec
         return response.text || "خطا در دریافت پاسخ.";
     } catch (error) {
         console.error("Gemini API Error (QuickCheck):", error);
-        return "سرویس در دسترس نیست.";
+        return "سرویس در حال حاضر در دسترس نیست.";
     }
 };
 

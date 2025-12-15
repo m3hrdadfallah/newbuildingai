@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, X, Send, Loader2, Sparkles } from 'lucide-react';
 import { createChatSession } from '../services/geminiService';
@@ -16,8 +15,12 @@ export const AIChat: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!chatSessionRef.current) {
-            chatSessionRef.current = createChatSession();
+        try {
+            if (!chatSessionRef.current) {
+                chatSessionRef.current = createChatSession();
+            }
+        } catch (e) {
+            console.error("Failed to initialize chat session", e);
         }
     }, []);
 
@@ -26,7 +29,7 @@ export const AIChat: React.FC = () => {
     }, [messages, isOpen]);
 
     const handleSend = async () => {
-        if (!input.trim() || !chatSessionRef.current) return;
+        if (!input.trim()) return;
 
         const userMsg: ChatMessage = {
             id: Date.now().toString(),
@@ -40,6 +43,10 @@ export const AIChat: React.FC = () => {
         setIsLoading(true);
 
         try {
+            if (!chatSessionRef.current) {
+                 chatSessionRef.current = createChatSession();
+            }
+            
             const result = await chatSessionRef.current.sendMessage({ message: userMsg.text });
             const responseText = result.text;
             
@@ -49,11 +56,24 @@ export const AIChat: React.FC = () => {
                 text: responseText,
                 timestamp: Date.now()
             }]);
-        } catch (error) {
+        } catch (error: any) {
+            console.error("Chat Error:", error);
+            
+            let errorMsg = 'متاسفانه خطایی در ارتباط با سرور رخ داد.';
+            
+            // Check for common errors
+            if (error.message?.includes('API key') || error.toString().includes('API key')) {
+                errorMsg = 'خطای تنظیمات: کلید API یافت نشد. لطفا تنظیمات محیطی (API_KEY) را بررسی کنید.';
+            } else if (error.message?.includes('404') || error.message?.includes('not found')) {
+                errorMsg = 'مدل هوش مصنوعی در دسترس نیست (404). لطفا بعدا تلاش کنید.';
+            } else if (error.message?.includes('fetch failed')) {
+                errorMsg = 'خطای شبکه. لطفا اتصال اینترنت خود را بررسی کنید.';
+            }
+
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: 'متاسفانه خطایی در ارتباط با سرور رخ داد.',
+                text: errorMsg,
                 timestamp: Date.now()
             }]);
         } finally {
