@@ -15,6 +15,8 @@ interface ProjectContextType {
     updateProjectDetails: (details: ProjectDetails) => void;
     updateProjectAnalysis: (riskScore: number, alerts: AIAlert[]) => void;
     saveProject: () => void;
+    importProject: (data: any) => void;
+    exportProjectJSON: () => void;
     isLoadingData: boolean;
 }
 
@@ -24,7 +26,6 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 const INITIAL_RESOURCES: Resource[] = [
     { id: 'r1', name: 'سیمان تیپ 2', type: 'Material', unit: 'پاکت', costRate: 75000, currency: 'تومان', availabilityScore: 90 },
     { id: 'r2', name: 'کارگر ساده', type: 'Work', unit: 'ساعت', costRate: 180000, currency: 'تومان', availabilityScore: 80 },
-    // ... (rest of initial resources can be kept or simplified)
 ];
 const getPastDate = (daysAgo: number) => {
     const d = new Date();
@@ -86,8 +87,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                     if (savedProject) {
                         setCurrentProject(savedProject);
                     } else {
-                        // If no project exists, we keep the DEFAULT_PROJECT
-                        // and optionally save it immediately so they have a doc
                         await saveProjectData(auth.currentUser.uid, DEFAULT_PROJECT);
                     }
                 } catch (error) {
@@ -122,15 +121,58 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
             try {
                 await saveProjectData(auth.currentUser.uid, currentProject);
                 console.log("Project saved to Firebase!");
-                // Optionally show a toast notification here
             } catch (error) {
                 console.error("Error saving project:", error);
             }
         }
     };
 
+    const importProject = async (data: any) => {
+        try {
+            if (!data || !data.tasks || !data.details) {
+                alert("فایل انتخاب شده نامعتبر است.");
+                return;
+            }
+            // Basic validation passed, update state
+            setCurrentProject(data);
+            
+            // Save to cloud immediately
+            if (auth.currentUser) {
+                await saveProjectData(auth.currentUser.uid, data);
+            }
+            alert("پروژه با موفقیت بارگذاری شد.");
+        } catch (error) {
+            console.error("Import failed", error);
+            alert("خطا در بارگذاری فایل.");
+        }
+    };
+
+    const exportProjectJSON = () => {
+        const dataStr = JSON.stringify(currentProject, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `sazyar-project-${new Date().toISOString().split('T')[0]}.json`;
+        link.href = url;
+        link.click();
+    };
+
     return (
-        <ProjectContext.Provider value={{ currentProject, addTask, updateTask, deleteTask, addResource, updateResource, deleteResource, updateProjectDetails, updateProjectAnalysis, saveProject, isLoadingData }}>
+        <ProjectContext.Provider value={{ 
+            currentProject, 
+            addTask, 
+            updateTask, 
+            deleteTask, 
+            addResource, 
+            updateResource, 
+            deleteResource, 
+            updateProjectDetails, 
+            updateProjectAnalysis, 
+            saveProject, 
+            importProject,
+            exportProjectJSON,
+            isLoadingData 
+        }}>
             {children}
         </ProjectContext.Provider>
     );
