@@ -4,7 +4,7 @@ import { Project, Task, Resource, ProjectDetails } from '../types';
 // Ensure API Key exists
 const apiKey = process.env.API_KEY;
 if (!apiKey) {
-  console.warn("Gemini API Key is missing. Using fallback/dummy key. Requests will fail.");
+  console.warn("Gemini API Key is missing. If you are running locally, check .env.local. If deployed, ensure 'API_KEY' is set in your hosting Environment Variables.");
 }
 
 const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
