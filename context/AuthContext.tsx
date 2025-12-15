@@ -24,19 +24,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         let mounted = true;
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (!mounted) return;
+            
             if (firebaseUser) {
                 try {
+                    // Try to get existing user data from Firestore
                     const userData = await getUserData(firebaseUser.uid);
+                    
                     if (mounted) {
                         if (userData) {
-                            // User exists in DB
+                            // User exists in Firestore
                             setUser({ ...userData, id: firebaseUser.uid });
                         } else {
-                            // New User (Google, Phone, or new Email) -> Create DB Record
-                            // Determine display name
-                            let displayName = 'کاربر جدید';
-                            if (firebaseUser.displayName) displayName = firebaseUser.displayName;
-                            else if (firebaseUser.phoneNumber) displayName = `کاربر ${firebaseUser.phoneNumber.slice(-4)}`;
+                            // New User (Google, Phone, or new Email) -> Sync to Firestore
+                            // Determine best display name
+                            let displayName = firebaseUser.displayName || 'کاربر جدید';
+                            
+                            // If phone auth and no display name, try to use phone number
+                            if (!firebaseUser.displayName && firebaseUser.phoneNumber) {
+                                displayName = `کاربر ${firebaseUser.phoneNumber.slice(-4)}`;
+                            }
 
                             // Determine identifier (username)
                             const username = firebaseUser.email || firebaseUser.phoneNumber || firebaseUser.uid;
@@ -51,12 +57,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                 plan: 'Free',
                                 quota: { used: 0, limit: 20 }
                             };
+                            
+                            // Save to Firestore
                             await saveUserData(firebaseUser.uid, newUser);
                             setUser(newUser);
                         }
                     }
                 } catch (error) {
                     console.error("Error fetching user data:", error);
+                    // Minimal fallback
+                    setUser({
+                        id: firebaseUser.uid,
+                        username: firebaseUser.email || 'unknown',
+                        name: firebaseUser.displayName || 'User',
+                        role: 'Viewer'
+                    });
                 }
             } else {
                 if (mounted) setUser(null);
@@ -64,18 +79,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (mounted) setLoading(false);
         });
 
-        // Failsafe: Turn off loading after 5 seconds if Firebase hangs
-        const timer = setTimeout(() => {
-            if (mounted && loading) {
-                console.warn("Auth timeout - forcing load completion");
-                setLoading(false);
-            }
-        }, 5000);
-
         return () => {
             mounted = false;
             unsubscribe();
-            clearTimeout(timer);
         };
     }, []);
 
@@ -104,13 +110,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    // Render loading state
+    // Render loading state (Blocking until Auth is determined)
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-gray-50">
+            <div className="flex h-screen items-center justify-center bg-gray-50 dir-rtl">
                 <div className="text-center">
                     <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto mb-4" />
-                    <p className="text-gray-500 font-medium">در حال اتصال به سازیار...</p>
+                    <p className="text-gray-500 font-medium">در حال احراز هویت...</p>
                 </div>
             </div>
         );

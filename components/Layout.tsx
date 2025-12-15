@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart2, Activity, Briefcase, Zap, FileText, PieChart, LogOut, User as UserIcon, Package, Menu, X } from 'lucide-react';
+import { Link, useLocation, Outlet } from 'react-router-dom';
+import { Home, BarChart2, Activity, Zap, FileText, PieChart, LogOut, User as UserIcon, Package, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Login } from './Login';
 import { IconLogo } from './Icon';
+import { AIChat } from './AIChat';
 
-export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Layout: React.FC = () => {
     const location = useLocation();
     const { isAuthenticated, logout, user } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -145,8 +146,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     </div>
                 </header>
                 <div className="p-4 sm:p-6 flex-1">
-                    {children}
+                    <Outlet />
                 </div>
+                {/* Floating AI Chat */}
+                <AIChat />
             </main>
         </div>
     );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { signIn, signUp, signInWithGoogle, setupRecaptcha, sendOtpToPhone, resetPassword } from '../services/authService';
-import { Lock, Mail, AlertCircle, Loader2, Smartphone, ArrowLeft, Check, RefreshCw, Globe, ChevronRight } from 'lucide-react';
+import { signIn, registerWithEmail, signInWithGoogle, setupRecaptcha, sendOtpToPhone, resetPassword } from '../services/authService';
+import { Lock, Mail, AlertCircle, Loader2, Smartphone, Check, User, ChevronRight } from 'lucide-react';
 import { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
 
 type AuthMethod = 'email' | 'phone';
@@ -11,6 +11,7 @@ export const Login: React.FC = () => {
     const [mode, setMode] = useState<AuthMode>('login');
     
     // Form States
+    const [fullName, setFullName] = useState(''); // New State for Full Name
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -65,7 +66,10 @@ export const Login: React.FC = () => {
             if (mode === 'login') {
                 await signIn(email, password);
             } else if (mode === 'register') {
-                await signUp(email, password);
+                if (!fullName.trim()) {
+                    throw new Error("لطفا نام و نام خانوادگی را وارد کنید.");
+                }
+                await registerWithEmail(email, password, fullName);
             } else if (mode === 'forgot') {
                 await resetPassword(email);
                 setSuccessMsg('لینک بازیابی رمز عبور ارسال شد.');
@@ -76,7 +80,7 @@ export const Login: React.FC = () => {
             if (err.code === 'auth/invalid-credential') setError('ایمیل یا رمز عبور اشتباه است.');
             else if (err.code === 'auth/email-already-in-use') setError('این ایمیل قبلا ثبت شده است.');
             else if (err.code === 'auth/weak-password') setError('رمز عبور ضعیف است.');
-            else setError(err.message);
+            else setError(err.message || 'خطایی رخ داده است.');
         }
     };
 
@@ -104,7 +108,8 @@ export const Login: React.FC = () => {
             setLoading(false);
         } catch (err: any) {
             setLoading(false);
-            setError('خطا در ارسال پیامک. لطفا مجدد تلاش کنید.');
+            console.error(err);
+            setError('خطا در ارسال پیامک. لطفا مجدد تلاش کنید یا از ورود با گوگل استفاده کنید.');
             if (window.recaptchaVerifier) {
                 window.recaptchaVerifier.clear();
                 window.recaptchaVerifier = undefined;
@@ -134,10 +139,11 @@ export const Login: React.FC = () => {
                 <div className="text-center mb-8">
                     <h1 className="text-2xl font-black text-slate-900 mb-2">
                         {mode === 'verify-otp' ? 'تایید شماره موبایل' : 
-                         mode === 'forgot' ? 'بازیابی رمز عبور' : 'ورود به سازیار'}
+                         mode === 'forgot' ? 'بازیابی رمز عبور' : 
+                         mode === 'register' ? 'ثبت‌نام در سازیار' : 'ورود به سازیار'}
                     </h1>
                     <p className="text-gray-500 text-sm">
-                        {mode === 'verify-otp' ? `کد ارسال شده به ${phoneNumber}` : 'برای ادامه، یکی از روش‌های زیر را انتخاب کنید'}
+                        {mode === 'verify-otp' ? `کد ارسال شده به ${phoneNumber}` : 'برای دسترسی به داشبورد وارد شوید'}
                     </p>
                 </div>
 
@@ -178,7 +184,7 @@ export const Login: React.FC = () => {
                     </div>
                 )}
 
-                {/* Verification Form */}
+                {/* Verification Form (OTP) */}
                 {mode === 'verify-otp' && (
                     <form onSubmit={handleVerifyOtp} className="space-y-4">
                         <input 
@@ -221,6 +227,22 @@ export const Login: React.FC = () => {
                 {/* Email Form */}
                 {((mode === 'login' || mode === 'register') && method === 'email') || mode === 'forgot' ? (
                     <form onSubmit={handleEmailAuth} className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                        
+                        {/* Name Input - Only for Register */}
+                        {mode === 'register' && (
+                             <div className="relative">
+                                <input 
+                                    type="text" 
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-right"
+                                    placeholder="نام و نام خانوادگی (فارسی)"
+                                    required
+                                />
+                                <User className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
+                            </div>
+                        )}
+
                         <div className="relative">
                             <input 
                                 type="email" 
@@ -228,6 +250,7 @@ export const Login: React.FC = () => {
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left dir-ltr"
                                 placeholder="name@example.com"
+                                required
                             />
                             <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
                         </div>
@@ -240,6 +263,7 @@ export const Login: React.FC = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left dir-ltr"
                                     placeholder="رمز عبور"
+                                    required
                                 />
                                 <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
                             </div>
@@ -264,7 +288,7 @@ export const Login: React.FC = () => {
                     </form>
                 ) : null}
 
-                {/* Toggle Register */}
+                {/* Toggle Register/Login */}
                 {(mode === 'login' || mode === 'register') && (
                     <div className="text-center mt-6">
                         <button 

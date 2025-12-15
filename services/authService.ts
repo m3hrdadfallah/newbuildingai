@@ -9,12 +9,17 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
   sendPasswordResetEmail,
-  ConfirmationResult
+  updateProfile
 } from "firebase/auth";
 
-// ثبت نام با ایمیل
-export const signUp = async (email: string, password: string) => {
-  return await createUserWithEmailAndPassword(auth, email, password);
+// ثبت نام با ایمیل و نام کامل
+export const registerWithEmail = async (email: string, password: string, fullName: string) => {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  // بلافاصله نام کاربر را در پروفایل Auth آپدیت می‌کنیم
+  await updateProfile(userCredential.user, {
+    displayName: fullName
+  });
+  return userCredential.user;
 };
 
 // ورود با ایمیل
@@ -31,9 +36,9 @@ export const signInWithGoogle = async () => {
 // آماده‌سازی ریکپچا برای ورود با موبایل
 export const setupRecaptcha = (elementId: string) => {
   return new RecaptchaVerifier(auth, elementId, {
-    'size': 'invisible', // یا 'normal' اگر می‌خواهید دیده شود
+    'size': 'invisible',
     'callback': () => {
-      // reCAPTCHA solved, allow signInWithPhoneNumber.
+      // reCAPTCHA solved
     }
   });
 };
@@ -51,9 +56,4 @@ export const resetPassword = async (email: string) => {
 // خروج
 export const signOut = async () => {
   return await firebaseSignOut(auth);
-};
-
-// دریافت کاربر فعلی
-export const getCurrentUser = (): FirebaseUser | null => {
-  return auth.currentUser;
 };
