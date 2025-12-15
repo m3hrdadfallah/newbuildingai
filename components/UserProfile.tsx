@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
-import { User, CheckCircle, AlertTriangle, CreditCard, Crown, Clock } from 'lucide-react';
+import { User, CheckCircle, AlertTriangle, CreditCard, Crown, Clock, Smartphone, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatJalaliDate } from '../utils/helpers';
 
@@ -13,6 +12,14 @@ export const UserProfile: React.FC = () => {
     if (!user) return null;
 
     const isPro = user.plan === 'Pro';
+    const isPhoneUser = user.username.startsWith('+') || /^\d+$/.test(user.username);
+
+    // Helper to get initials
+    const getInitials = () => {
+        if (user?.name && user.name !== 'کاربر جدید') return user.name.charAt(0);
+        if (user?.username && !user.username.startsWith('+')) return user.username.charAt(0).toUpperCase();
+        return 'U';
+    };
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -20,11 +27,14 @@ export const UserProfile: React.FC = () => {
                 <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-2xl font-bold border-4 border-slate-800">
-                            {user.username.charAt(0).toUpperCase()}
+                            {getInitials()}
                         </div>
                         <div>
                             <h2 className="text-xl font-bold">{user.name}</h2>
-                            <p className="text-slate-400 text-sm">@{user.username}</p>
+                            <p className="text-slate-400 text-sm flex items-center gap-1 dir-ltr justify-end">
+                                <span>{user.username}</span>
+                                {isPhoneUser ? <Smartphone className="w-3 h-3" /> : <Mail className="w-3 h-3" />}
+                            </p>
                         </div>
                     </div>
                     <div className="text-right">

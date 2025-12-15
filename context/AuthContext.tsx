@@ -29,12 +29,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     const userData = await getUserData(firebaseUser.uid);
                     if (mounted) {
                         if (userData) {
+                            // User exists in DB
                             setUser({ ...userData, id: firebaseUser.uid });
                         } else {
+                            // New User (Google, Phone, or new Email) -> Create DB Record
+                            // Determine display name
+                            let displayName = 'کاربر جدید';
+                            if (firebaseUser.displayName) displayName = firebaseUser.displayName;
+                            else if (firebaseUser.phoneNumber) displayName = `کاربر ${firebaseUser.phoneNumber.slice(-4)}`;
+
+                            // Determine identifier (username)
+                            const username = firebaseUser.email || firebaseUser.phoneNumber || firebaseUser.uid;
+
                             const newUser: User = {
                                 id: firebaseUser.uid,
-                                username: firebaseUser.email || 'user',
-                                name: firebaseUser.displayName || 'کاربر جدید',
+                                username: username,
+                                name: displayName,
                                 role: 'Viewer',
                                 plan: 'Free',
                                 quota: { used: 0, limit: 20 }
@@ -52,13 +62,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (mounted) setLoading(false);
         });
 
-        // Failsafe: Turn off loading after 3 seconds if Firebase hangs
+        // Failsafe: Turn off loading after 5 seconds if Firebase hangs
         const timer = setTimeout(() => {
             if (mounted && loading) {
                 console.warn("Auth timeout - forcing load completion");
                 setLoading(false);
             }
-        }, 3000);
+        }, 5000);
 
         return () => {
             mounted = false;

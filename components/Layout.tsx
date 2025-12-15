@@ -19,6 +19,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
     const closeSidebar = () => setSidebarOpen(false);
 
+    // Helper to get initials
+    const getInitials = () => {
+        if (user?.name && user.name !== 'کاربر جدید') return user.name.charAt(0);
+        if (user?.username && !user.username.startsWith('+')) return user.username.charAt(0).toUpperCase();
+        return 'U';
+    };
+
     return (
         <div className="flex h-screen overflow-hidden bg-gray-100 font-[Vazirmatn]">
             {/* Mobile Sidebar Overlay */}
@@ -131,8 +138,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                         </h2>
                     </div>
                     <div className="flex items-center space-x-4 space-x-reverse shrink-0">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 text-sm">
-                            {user?.username.charAt(0).toUpperCase()}
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 text-sm font-bold">
+                            {getInitials()}
                         </div>
                         <span className="text-sm font-medium text-gray-600 hidden sm:inline">{user?.name}</span>
                     </div>
