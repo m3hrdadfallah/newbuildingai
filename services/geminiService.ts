@@ -21,8 +21,8 @@ if (apiKey) {
     }
 }
 
-const COMPLEX_MODEL = 'gemini-2.5-flash';
-const FAST_MODEL = 'gemini-2.0-flash-lite';
+const COMPLEX_MODEL = 'gemini-3-pro-preview';
+const FAST_MODEL = 'gemini-2.5-flash';
 
 export const createChatSession = (): Chat | null => {
     if (!ai) return null;

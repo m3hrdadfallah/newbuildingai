@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { signIn, signUp, signInWithGoogle, setupRecaptcha, sendOtpToPhone, resetPassword } from '../services/authService';
-import { Lock, Mail, AlertCircle, Loader2, Smartphone, ArrowLeft, Check, RefreshCw } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader2, Smartphone, ArrowLeft, Check, RefreshCw, Globe } from 'lucide-react';
 import { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
 
 type AuthMethod = 'email' | 'phone';
@@ -22,15 +22,17 @@ export const Login: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
-    // Initial check for recaptcha cleanup
+    // Clear Recaptcha when switching methods to avoid "container not found" or detached errors
     useEffect(() => {
-        // Cleanup function if needed
-        return () => {
-            if (window.recaptchaVerifier) {
+        if (window.recaptchaVerifier) {
+            try {
                 window.recaptchaVerifier.clear();
+                window.recaptchaVerifier = undefined;
+            } catch (e) {
+                console.error("Recaptcha clear error", e);
             }
-        };
-    }, []);
+        }
+    }, [method, mode]);
 
     const resetState = () => {
         setError(null);
@@ -43,10 +45,15 @@ export const Login: React.FC = () => {
         setLoading(true);
         try {
             await signInWithGoogle();
+            // Auth state change will handle redirect via AuthContext
         } catch (err: any) {
-            console.error(err);
-            setError('خطا در ورود با گوگل. لطفا مجدد تلاش کنید.');
+            console.error("Google Login Error:", err);
             setLoading(false);
+            if (err.code === 'auth/popup-closed-by-user') {
+                setError('پنجره ورود توسط کاربر بسته شد.');
+            } else {
+                setError('خطا در ورود با گوگل. لطفا اتصال اینترنت را بررسی کنید.');
+            }
         }
     };
 
@@ -84,35 +91,37 @@ export const Login: React.FC = () => {
         e.preventDefault();
         resetState();
         
-        // Normalize phone number for Iran
         let formattedPhone = phoneNumber.trim();
-        // Remove leading 0 if exists
+        // Simple normalization
         if (formattedPhone.startsWith('0')) formattedPhone = formattedPhone.substring(1);
-        // Ensure +98 prefix
         if (!formattedPhone.startsWith('+98')) formattedPhone = `+98${formattedPhone}`;
 
         if (formattedPhone.length < 12) {
-            setError('شماره موبایل نامعتبر است.');
+            setError('شماره موبایل نامعتبر است (مثال: 9123456789).');
             return;
         }
 
         setLoading(true);
 
         try {
-            // Setup invisible recaptcha
+            // Check if element exists before setting up
+            if (!document.getElementById('recaptcha-container')) {
+                 throw new Error('Recaptcha container missing');
+            }
+
             if (!window.recaptchaVerifier) {
                 window.recaptchaVerifier = setupRecaptcha('recaptcha-container');
             }
+            
             const appVerifier = window.recaptchaVerifier;
             const result = await sendOtpToPhone(formattedPhone, appVerifier);
             setConfirmationResult(result);
             setMode('verify-otp');
             setLoading(false);
         } catch (err: any) {
-            console.error(err);
+            console.error("OTP Error:", err);
             setLoading(false);
-            setError('خطا در ارسال پیامک. لطفا شماره را بررسی کنید یا دقایقی دیگر تلاش کنید.');
-            // Reset recaptcha on error
+            setError('خطا در ارسال پیامک. لطفا دقایقی دیگر تلاش کنید یا شماره را بررسی کنید.');
             if (window.recaptchaVerifier) {
                 window.recaptchaVerifier.clear();
                 window.recaptchaVerifier = undefined;
@@ -128,7 +137,6 @@ export const Login: React.FC = () => {
         setLoading(true);
         try {
             await confirmationResult.confirm(otp);
-            // Auth state change will handle redirect
         } catch (err: any) {
             console.error(err);
             setLoading(false);
@@ -154,27 +162,30 @@ export const Login: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Tabs (Only show in login/register mode) */}
+                {/* --- Recaptcha Container (Always Mounted) --- */}
+                <div id="recaptcha-container" className="justify-center flex mb-4"></div>
+
+                {/* Tabs */}
                 {(mode === 'login' || mode === 'register') && (
                     <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
                         <button 
                             onClick={() => { setMethod('email'); setError(null); }}
-                            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${method === 'email' ? 'bg-white shadow text-slate-800' : 'text-gray-500'}`}
+                            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${method === 'email' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             <Mail className="w-4 h-4" />
                             ایمیل
                         </button>
                         <button 
                             onClick={() => { setMethod('phone'); setError(null); }}
-                            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${method === 'phone' ? 'bg-white shadow text-slate-800' : 'text-gray-500'}`}
+                            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${method === 'phone' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             <Smartphone className="w-4 h-4" />
-                            شماره موبایل
+                            پیامک (OTP)
                         </button>
                     </div>
                 )}
 
-                {/* Messages */}
+                {/* Alerts */}
                 {error && (
                     <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-2">
                         <AlertCircle className="w-4 h-4 shrink-0" />
@@ -188,36 +199,34 @@ export const Login: React.FC = () => {
                     </div>
                 )}
 
-                {/* Google Button (Only in Login/Register Email/Phone Mode) */}
+                {/* Google Sign In - Always visible in login/register */}
                 {(mode === 'login' || mode === 'register') && (
                     <div className="mb-6">
                         <button 
                             type="button"
                             onClick={handleGoogleLogin}
                             disabled={loading}
-                            className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors flex justify-center items-center gap-2 text-sm"
+                            className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors flex justify-center items-center gap-3 text-sm shadow-sm"
                         >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                                <>
+                            {loading && method === 'email' && !email ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                                <div className="flex items-center gap-2">
                                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                                         <path fill="#FBBC05" d="M5.84 14.17c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.54z" />
                                         <path fill="#EA4335" d="M12 4.6c1.62 0 3.1.56 4.23 1.64l3.18-3.18C17.46 1.14 14.97 0 12 0 7.7 0 3.99 2.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                                     </svg>
-                                    ورود با حساب گوگل
-                                </>
+                                    <span>ورود با حساب گوگل</span>
+                                </div>
                             )}
                         </button>
                         <div className="relative flex py-5 items-center">
                             <div className="flex-grow border-t border-gray-200"></div>
-                            <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">یا ورود با</span>
+                            <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">یا ورود با {method === 'email' ? 'ایمیل' : 'شماره همراه'}</span>
                             <div className="flex-grow border-t border-gray-200"></div>
                         </div>
                     </div>
                 )}
-
-                {/* --- Forms --- */}
 
                 {/* 1. OTP Verification Form */}
                 {mode === 'verify-otp' && (
@@ -238,14 +247,14 @@ export const Login: React.FC = () => {
                             disabled={loading || otp.length < 6}
                             className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-blue-900/10 flex justify-center items-center gap-2 disabled:opacity-50"
                         >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'تایید و ورود'}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'تایید کد'}
                         </button>
                         <button 
                             type="button"
                             onClick={() => { setMode('login'); setMethod('phone'); resetState(); }}
                             className="w-full text-sm text-gray-500 hover:text-gray-800 py-2"
                         >
-                            تغییر شماره
+                            اصلاح شماره موبایل
                         </button>
                     </form>
                 )}
@@ -256,27 +265,25 @@ export const Login: React.FC = () => {
                         <div>
                             <label className="block text-xs font-bold text-gray-700 mb-2">شماره موبایل</label>
                             <div className="relative" dir="ltr">
-                                <span className="absolute left-4 top-3.5 text-gray-400 text-sm font-mono">+98</span>
+                                <span className="absolute left-4 top-3.5 text-gray-400 text-sm font-mono select-none">+98</span>
                                 <input 
                                     type="tel" 
                                     required
                                     value={phoneNumber}
                                     onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ''))}
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-lg"
+                                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-lg text-left"
                                     placeholder="912 345 6789"
                                 />
                                 <Smartphone className="w-5 h-5 text-gray-400 absolute right-3 top-3.5" />
                             </div>
                         </div>
-                        
-                        <div id="recaptcha-container"></div>
 
                         <button 
                             type="submit" 
                             disabled={loading || phoneNumber.length < 10}
                             className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-blue-900/10 flex justify-center items-center gap-2 disabled:opacity-50"
                         >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'ارسال کد تایید'}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'ارسال کد تایید (SMS)'}
                         </button>
                     </form>
                 )}
@@ -285,7 +292,7 @@ export const Login: React.FC = () => {
                 {(mode === 'login' || mode === 'register') && method === 'email' && (
                     <form onSubmit={handleEmailAuth} className="space-y-4">
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-2">ایمیل</label>
+                            <label className="block text-xs font-bold text-gray-700 mb-2">آدرس ایمیل</label>
                             <div className="relative">
                                 <input 
                                     type="email" 
@@ -293,7 +300,7 @@ export const Login: React.FC = () => {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-left dir-ltr"
-                                    placeholder="name@company.com"
+                                    placeholder="name@example.com"
                                 />
                                 <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
                             </div>
@@ -331,7 +338,7 @@ export const Login: React.FC = () => {
                             className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-blue-900/10 flex justify-center items-center gap-2"
                         >
                             {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                            {mode === 'login' ? 'ورود به داشبورد' : 'ثبت نام رایگان'}
+                            {mode === 'login' ? 'ورود به پنل کاربری' : 'ثبت نام رایگان'}
                         </button>
                     </form>
                 )}
@@ -348,7 +355,7 @@ export const Login: React.FC = () => {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-left dir-ltr"
-                                    placeholder="name@company.com"
+                                    placeholder="name@example.com"
                                 />
                                 <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
                             </div>
@@ -391,18 +398,19 @@ export const Login: React.FC = () => {
                         </button>
                     </div>
                 )}
-
             </div>
             
-            {/* Global Recaptcha Window Type Def */}
+            {/* Extended Window interface for Recaptcha */}
             <script dangerouslySetInnerHTML={{__html: `
-                window.recaptchaVerifier = null;
+                // Ensure recaptcha variable holder exists
+                if(typeof window.recaptchaVerifier === 'undefined') {
+                    window.recaptchaVerifier = null;
+                }
             `}} />
         </div>
     );
 };
 
-// Extend Window interface for Recaptcha
 declare global {
   interface Window {
     recaptchaVerifier: RecaptchaVerifier | undefined;
