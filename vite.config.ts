@@ -7,7 +7,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
+    // Load env file based on `mode` in the current working directory.
+    // The third parameter '' ensures we load all env vars, not just VITE_*
+    const env = loadEnv(mode, process.cwd(), '');
+    
+    // Robustly determine the API key from various common environment variable names
+    // This fixes issues where deployment platforms use 'API_KEY' or 'GEMINI_API_KEY'
+    const apiKey = env.API_KEY || env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY || '';
+
     return {
       server: {
         port: 3000,
@@ -15,8 +22,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.API_KEY': JSON.stringify(apiKey),
       },
       resolve: {
         alias: {

@@ -1,10 +1,17 @@
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Ensure API Key exists
+const apiKey = process.env.API_KEY;
+if (!apiKey) {
+  console.error("Gemini API Key is missing. Please check your environment variables (API_KEY or GEMINI_API_KEY).");
+}
 
+const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key-to-prevent-crash' });
+
+// Use stable aliases from documentation
 const COMPLEX_MODEL = "gemini-2.5-flash";
-const FAST_MODEL = "gemini-2.0-flash-lite";
+const FAST_MODEL = "gemini-flash-lite-latest"; 
 
 export const createChatSession = (): Chat => {
     return ai.chats.create({
@@ -50,7 +57,7 @@ export const quickCheckTask = async (taskTitle: string, duration: number, projec
         });
         return response.text || "خطا در دریافت پاسخ.";
     } catch (error) {
-        console.error(error);
+        console.error("Gemini API Error (QuickCheck):", error);
         return "سرویس در دسترس نیست.";
     }
 };
@@ -104,9 +111,9 @@ export const simulateScenario = async (
         const text = response.text;
         return JSON.parse(text || "{}");
     } catch (error) {
-        console.error("Simulation Error", error);
+        console.error("Simulation Error:", error);
         return {
-            impactDescription: "خطا در پردازش سناریو",
+            impactDescription: "خطا در پردازش سناریو. لطفاً اتصال اینترنت را بررسی کنید.",
             costDelta: 0,
             timeDelta: 0,
             recommendedActions: ["بررسی دستی سناریو"]
@@ -147,7 +154,7 @@ export const analyzeProjectRisks = async (project: Project): Promise<any> => {
         });
         return JSON.parse(response.text || "{}");
     } catch (error) {
-        console.error(error);
+        console.error("Risk Analysis Error:", error);
         return null;
     }
 };
@@ -187,7 +194,7 @@ export const suggestProjectResources = async (project: Project): Promise<any[]> 
         });
         return JSON.parse(response.text || "[]");
     } catch (error) {
-        console.error(error);
+        console.error("Resource Suggestion Error:", error);
         return [];
     }
 };
