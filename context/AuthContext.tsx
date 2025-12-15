@@ -21,34 +21,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let mounted = true;
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (!mounted) return;
             if (firebaseUser) {
                 try {
                     const userData = await getUserData(firebaseUser.uid);
-                    if (userData) {
-                        setUser({ ...userData, id: firebaseUser.uid });
-                    } else {
-                        const newUser: User = {
-                            id: firebaseUser.uid,
-                            username: firebaseUser.email || 'user',
-                            name: firebaseUser.displayName || 'کاربر جدید',
-                            role: 'Viewer',
-                            plan: 'Free',
-                            quota: { used: 0, limit: 20 }
-                        };
-                        await saveUserData(firebaseUser.uid, newUser);
-                        setUser(newUser);
+                    if (mounted) {
+                        if (userData) {
+                            setUser({ ...userData, id: firebaseUser.uid });
+                        } else {
+                            const newUser: User = {
+                                id: firebaseUser.uid,
+                                username: firebaseUser.email || 'user',
+                                name: firebaseUser.displayName || 'کاربر جدید',
+                                role: 'Viewer',
+                                plan: 'Free',
+                                quota: { used: 0, limit: 20 }
+                            };
+                            await saveUserData(firebaseUser.uid, newUser);
+                            setUser(newUser);
+                        }
                     }
                 } catch (error) {
                     console.error("Error fetching user data:", error);
                 }
             } else {
-                setUser(null);
+                if (mounted) setUser(null);
             }
-            setLoading(false);
+            if (mounted) setLoading(false);
         });
 
-        return () => unsubscribe();
+        // Failsafe: Turn off loading after 3 seconds if Firebase hangs
+        const timer = setTimeout(() => {
+            if (mounted && loading) {
+                console.warn("Auth timeout - forcing load completion");
+                setLoading(false);
+            }
+        }, 3000);
+
+        return () => {
+            mounted = false;
+            unsubscribe();
+            clearTimeout(timer);
+        };
     }, []);
 
     const logout = async () => {
@@ -76,6 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    // Render loading state
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center bg-gray-50">

@@ -1,11 +1,17 @@
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
-// Safely access API key. Note: In Vite, process.env.API_KEY is replaced by define in vite.config.ts.
-// If not defined, it might be undefined.
-const apiKey = process.env.API_KEY;
+// In a Vite environment, we rely on the define in vite.config.ts to replace this string.
+// If accessing process directly causes a crash in the browser, we wrap it.
+let apiKey: string | undefined = undefined;
+try {
+    // @ts-ignore
+    apiKey = process.env.API_KEY;
+} catch (e) {
+    console.warn("process.env.API_KEY access failed");
+}
 
-// Only initialize if key exists to prevent crash on load
+// Only initialize if key exists
 let ai: GoogleGenAI | null = null;
 if (apiKey) {
     try {
@@ -32,7 +38,7 @@ export const createChatSession = (): Chat | null => {
 };
 
 export const quickCheckTask = async (taskTitle: string, duration: number, projectDetails?: ProjectDetails): Promise<string> => {
-    if (!ai) return "سرویس هوش مصنوعی غیرفعال است (API Key یافت نشد).";
+    if (!ai) return "سرویس هوش مصنوعی غیرفعال است.";
     
     try {
         let contextPrompt = "";
@@ -70,9 +76,6 @@ export const quickCheckTask = async (taskTitle: string, duration: number, projec
     }
 };
 
-/**
- * Section F: Full Scenario Simulation
- */
 export const simulateScenario = async (
     project: Project,
     scenarioDescription: string
@@ -91,7 +94,7 @@ export const simulateScenario = async (
 
     const projectSummary = {
         name: project.name,
-        details: project.details, // Include full details (Dimensions, Location, Contract etc.)
+        details: project.details, 
         totalTasks: project.tasks.length,
         currentRiskScore: project.projectRiskScore,
         criticalTasks: project.tasks.filter(t => t.isCritical || t.riskLevel === 'High').map(t => ({ title: t.title, responsible: t.responsible })),
@@ -139,9 +142,6 @@ export const simulateScenario = async (
     }
 };
 
-/**
- * Section D & E: AI Risk Analysis & Alerts
- */
 export const analyzeProjectRisks = async (project: Project): Promise<any> => {
     if (!ai) return null;
 
@@ -155,7 +155,6 @@ export const analyzeProjectRisks = async (project: Project): Promise<any> => {
         isCritical: t.isCritical
     }));
 
-    // Pass project details to AI for better context (e.g. Structure Type affects risks)
     const context = {
         details: project.details,
         tasks: tasksData
@@ -183,9 +182,6 @@ export const analyzeProjectRisks = async (project: Project): Promise<any> => {
     }
 };
 
-/**
- * Resource Estimation
- */
 export const suggestProjectResources = async (project: Project): Promise<any[]> => {
     if (!ai) return [];
 
