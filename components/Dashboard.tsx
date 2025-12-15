@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useProject } from '../context/ProjectContext';
+import { useAuth } from '../context/AuthContext';
 import { analyzeProjectRisks } from '../services/geminiService';
-import { Activity, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles, Upload, Download, Save, FileInput } from 'lucide-react';
+import { Activity, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles, Upload, Download, Save, Smartphone, Mail, Globe } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
     const { currentProject, updateProjectAnalysis, saveProject, importProject, exportProjectJSON } = useProject();
+    const { user } = useAuth();
     const [loadingAnalysis, setLoadingAnalysis] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -12,7 +14,6 @@ export const Dashboard: React.FC = () => {
         setLoadingAnalysis(true);
         const result = await analyzeProjectRisks(currentProject);
         if (result) {
-            // Map AI result to our internal types
             const alerts = result.alerts.map((a: any, idx: number) => ({
                 id: `ai-${Date.now()}-${idx}`,
                 type: a.type,
@@ -40,65 +41,56 @@ export const Dashboard: React.FC = () => {
             }
         };
         reader.readAsText(file);
-        // Reset input
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // Calculate Total Budget (BAC)
     const totalBudget = currentProject.tasks.reduce((acc, task) => {
         const resourceCost = task.resources.reduce((tRes, res) => {
             const resourceInfo = currentProject.resources.find(r => r.id === res.resourceId);
             return tRes + (resourceInfo ? resourceInfo.costRate * res.quantity : 0);
         }, 0);
-        
-        // If user entered a manual budget (fixedCost), use it. Else use resource sum.
         const taskBac = task.fixedCost !== undefined ? task.fixedCost : resourceCost;
         return acc + taskBac;
     }, 0);
 
-    // Calculate Physical Progress Weighted (simplified for dashboard)
     const totalProgress = currentProject.tasks.length > 0 
         ? Math.round(currentProject.tasks.reduce((acc, t) => acc + t.percentComplete, 0) / currentProject.tasks.length) 
         : 0;
 
+    // Helper to determine login icon
+    const getLoginIcon = () => {
+        if (user?.phoneNumber) return <Smartphone className="w-4 h-4" />;
+        if (user?.email && !user.name?.includes('کاربر')) return <Globe className="w-4 h-4" />; // Assume Google if complex name? simplified assumption
+        return <Mail className="w-4 h-4" />;
+    };
+
     return (
         <div className="space-y-6">
-            {/* Action Bar */}
-            <div className="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800">داشبورد مدیریت پروژه</h2>
-                    <p className="text-sm text-gray-500">نمای کلی وضعیت و سلامت پروژه</p>
+            {/* User Welcome Card */}
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                 <div>
+                    <h2 className="text-xl font-bold mb-1">سلام، {user?.name || 'کاربر گرامی'}</h2>
+                    <p className="text-slate-400 text-sm flex items-center gap-2">
+                        <span className="opacity-70">روش ورود شما:</span>
+                        <span className="bg-slate-700 px-3 py-1 rounded-full text-white font-mono text-xs dir-ltr flex items-center gap-2 border border-slate-600">
+                            {getLoginIcon()}
+                            {user?.email || user?.phoneNumber || 'ناشناس'}
+                        </span>
+                    </p>
                 </div>
-                <div className="flex gap-2">
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        accept=".json" 
-                        onChange={handleFileUpload} 
-                    />
-                    <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-100 text-sm font-bold transition-colors shadow-sm"
-                        title="بارگذاری فایل پروژه (JSON) از نرم‌افزارهای دیگر"
-                    >
-                        <Upload className="w-4 h-4" />
-                        <span>وارد کردن پروژه</span>
-                    </button>
-                    <button 
-                        onClick={exportProjectJSON}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
-                        title="دانلود فایل پشتیبان پروژه"
-                    >
-                        <Download className="w-4 h-4" />
-                        <span className="hidden sm:inline">خروجی</span>
-                    </button>
-                    <button 
-                        onClick={saveProject}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-bold shadow transition-colors"
-                    >
+                <div className="flex gap-3">
+                    <button onClick={saveProject} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow transition-colors flex items-center gap-2">
                         <Save className="w-4 h-4" />
-                        ذخیره در ابری
+                        ذخیره تغییرات
+                    </button>
+                    <button onClick={exportProjectJSON} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm shadow transition-colors flex items-center gap-2">
+                        <Download className="w-4 h-4" />
+                        خروجی
+                    </button>
+                    <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileUpload} />
+                    <button onClick={() => fileInputRef.current?.click()} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm shadow transition-colors flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        بارگذاری
                     </button>
                 </div>
             </div>

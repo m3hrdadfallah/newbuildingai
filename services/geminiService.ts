@@ -1,31 +1,12 @@
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
-// In a Vite environment, we rely on the define in vite.config.ts to replace this string.
-// If accessing process directly causes a crash in the browser, we wrap it.
-let apiKey: string | undefined = undefined;
-try {
-    // @ts-ignore
-    apiKey = process.env.API_KEY;
-} catch (e) {
-    console.warn("process.env.API_KEY access failed");
-}
-
-// Only initialize if key exists
-let ai: GoogleGenAI | null = null;
-if (apiKey) {
-    try {
-        ai = new GoogleGenAI({ apiKey });
-    } catch (e) {
-        console.error("Failed to initialize Gemini:", e);
-    }
-}
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const COMPLEX_MODEL = 'gemini-3-pro-preview';
 const FAST_MODEL = 'gemini-2.5-flash';
 
-export const createChatSession = (): Chat | null => {
-    if (!ai) return null;
+export const createChatSession = (): Chat => {
     return ai.chats.create({
         model: COMPLEX_MODEL,
         config: {
@@ -38,8 +19,6 @@ export const createChatSession = (): Chat | null => {
 };
 
 export const quickCheckTask = async (taskTitle: string, duration: number, projectDetails?: ProjectDetails): Promise<string> => {
-    if (!ai) return "سرویس هوش مصنوعی غیرفعال است.";
-    
     try {
         let contextPrompt = "";
         if (projectDetails) {
@@ -85,13 +64,6 @@ export const simulateScenario = async (
     timeDelta: number, 
     recommendedActions: string[] 
 }> => {
-    if (!ai) return {
-        impactDescription: "سرویس هوش مصنوعی تنظیم نشده است.",
-        costDelta: 0,
-        timeDelta: 0,
-        recommendedActions: []
-    };
-
     const projectSummary = {
         name: project.name,
         details: project.details, 
@@ -143,8 +115,6 @@ export const simulateScenario = async (
 };
 
 export const analyzeProjectRisks = async (project: Project): Promise<any> => {
-    if (!ai) return null;
-
     const tasksData = project.tasks.map(t => ({
         id: t.id,
         name: t.title,
@@ -183,8 +153,6 @@ export const analyzeProjectRisks = async (project: Project): Promise<any> => {
 };
 
 export const suggestProjectResources = async (project: Project): Promise<any[]> => {
-    if (!ai) return [];
-
     const context = {
         details: project.details,
         tasks: project.tasks.map(t => t.title)
