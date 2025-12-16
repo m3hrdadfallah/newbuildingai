@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { signIn, registerWithEmail, resetPassword } from '../services/authService';
-import { Lock, Mail, AlertCircle, Loader2, Check, User } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader2, Check, User as UserIcon, ArrowLeft } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'forgot';
 
@@ -8,7 +8,7 @@ export const Login: React.FC = () => {
     const [mode, setMode] = useState<AuthMode>('login');
     
     // Form States
-    const [fullName, setFullName] = useState(''); // New State for Full Name
+    const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     
@@ -39,8 +39,10 @@ export const Login: React.FC = () => {
             setError('رمز عبور باید حداقل ۶ کاراکتر باشد.');
         } else if (errorCode === 'auth/too-many-requests') {
             setError('تعداد درخواست‌ها زیاد است. لطفا دقایقی دیگر تلاش کنید.');
+        } else if (errorCode === 'auth/network-request-failed') {
+            setError('خطا در اتصال به اینترنت.');
         } else {
-            setError(errorMessage || 'خطایی رخ داده است. لطفا اتصال اینترنت را بررسی کنید.');
+            setError('خطایی رخ داده است. لطفا مجددا تلاش کنید.');
         }
     };
 
@@ -58,13 +60,13 @@ export const Login: React.FC = () => {
                 }
                 await registerWithEmail(email, password, fullName);
             } else if (mode === 'forgot') {
+                if (!email) throw new Error("لطفا ایمیل را وارد کنید.");
                 await resetPassword(email);
                 setSuccessMsg('لینک بازیابی رمز عبور به ایمیل شما ارسال شد.');
                 setLoading(false);
             }
         } catch (err: any) {
-            // Handle manual validation errors
-            if (err.message === "لطفا نام و نام خانوادگی را وارد کنید.") {
+            if (err.message === "لطفا نام و نام خانوادگی را وارد کنید." || err.message === "لطفا ایمیل را وارد کنید.") {
                 setError(err.message);
                 setLoading(false);
             } else {
@@ -84,28 +86,28 @@ export const Login: React.FC = () => {
                          mode === 'register' ? 'ثبت‌نام در سازیار' : 'ورود به سازیار'}
                     </h1>
                     <p className="text-gray-500 text-sm">
-                        برای دسترسی به داشبورد وارد شوید
+                        {mode === 'forgot' ? 'ایمیل خود را وارد کنید' : 'برای دسترسی به داشبورد وارد شوید'}
                     </p>
                 </div>
 
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 leading-relaxed"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
-                {successMsg && <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2"><Check className="w-4 h-4 shrink-0" />{successMsg}</div>}
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-xs font-bold flex items-center gap-2 leading-relaxed border border-red-100"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
+                {successMsg && <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-6 text-xs font-bold flex items-center gap-2 border border-green-100"><Check className="w-4 h-4 shrink-0" />{successMsg}</div>}
 
                 {/* Email Form */}
-                <form onSubmit={handleEmailAuth} className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                <form onSubmit={handleEmailAuth} className="space-y-4">
                     
                     {/* Name Input - Only for Register */}
                     {mode === 'register' && (
-                            <div className="relative">
+                        <div className="relative">
                             <input 
                                 type="text" 
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-right"
-                                placeholder="نام و نام خانوادگی (فارسی)"
+                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                placeholder="نام و نام خانوادگی"
                                 required
                             />
-                            <User className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
+                            <UserIcon className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
                         </div>
                     )}
 
@@ -114,7 +116,7 @@ export const Login: React.FC = () => {
                             type="email" 
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left dir-ltr"
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-left dir-ltr"
                             placeholder="name@example.com"
                             required
                         />
@@ -127,7 +129,7 @@ export const Login: React.FC = () => {
                                 type="password" 
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left dir-ltr"
+                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-left dir-ltr"
                                 placeholder="رمز عبور"
                                 required
                             />
@@ -137,31 +139,37 @@ export const Login: React.FC = () => {
 
                     {mode === 'login' && (
                         <div className="text-left">
-                            <button type="button" onClick={() => { setMode('forgot'); resetState(); }} className="text-xs text-blue-600 font-medium">رمز عبور را فراموش کردید؟</button>
+                            <button type="button" onClick={() => { setMode('forgot'); resetState(); }} className="text-xs text-blue-600 font-medium hover:underline">رمز عبور را فراموش کردید؟</button>
                         </div>
                     )}
 
-                    <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                    <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
                         {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (
                             mode === 'forgot' ? 'ارسال لینک بازیابی' : 
-                            mode === 'register' ? 'ثبت نام' : 'ورود'
+                            mode === 'register' ? 'ثبت نام رایگان' : 'ورود به حساب'
                         )}
                     </button>
 
                     {mode === 'forgot' && (
-                        <button type="button" onClick={() => { setMode('login'); resetState(); }} className="w-full text-sm text-gray-500">بازگشت</button>
+                        <button type="button" onClick={() => { setMode('login'); resetState(); }} className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-800 mt-2">
+                            <ArrowLeft className="w-4 h-4" />
+                            بازگشت به ورود
+                        </button>
                     )}
                 </form>
 
-                {/* Toggle Register/Login */}
+                {/* Separator */}
                 {(mode === 'login' || mode === 'register') && (
-                    <div className="text-center mt-6">
+                    <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+                        <p className="text-sm text-gray-500 mb-2">
+                             {mode === 'login' ? 'هنوز حساب کاربری ندارید؟' : 'قبلاً ثبت‌نام کرده‌اید؟'}
+                        </p>
                         <button 
                             type="button"
                             onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); resetState(); }}
-                            className="text-sm text-slate-600 font-bold hover:text-blue-600"
+                            className="text-sm text-blue-600 font-bold hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors"
                         >
-                            {mode === 'login' ? 'حساب ندارید؟ ثبت نام کنید' : 'حساب دارید؟ وارد شوید'}
+                            {mode === 'login' ? 'ساخت حساب جدید' : 'وارد شوید'}
                         </button>
                     </div>
                 )}

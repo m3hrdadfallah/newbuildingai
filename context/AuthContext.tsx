@@ -35,23 +35,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             // User exists in Firestore
                             setUser({ ...userData, id: firebaseUser.uid });
                         } else {
-                            // New User (Google, Phone, or new Email) -> Sync to Firestore
-                            // Determine best display name
-                            let displayName = firebaseUser.displayName || 'کاربر جدید';
-                            
-                            // If phone auth and no display name, try to use phone number
-                            if (!firebaseUser.displayName && firebaseUser.phoneNumber) {
-                                displayName = `کاربر ${firebaseUser.phoneNumber.slice(-4)}`;
-                            }
-
-                            // Determine identifier (username)
-                            const username = firebaseUser.email || firebaseUser.phoneNumber || firebaseUser.uid;
+                            // New User -> Sync to Firestore
+                            const displayName = firebaseUser.displayName || 'کاربر جدید';
+                            const username = firebaseUser.email || firebaseUser.uid;
 
                             const newUser: User = {
                                 id: firebaseUser.uid,
                                 username: username,
                                 email: firebaseUser.email || undefined,
-                                phoneNumber: firebaseUser.phoneNumber || undefined,
                                 name: displayName,
                                 role: 'Viewer',
                                 plan: 'Free',
@@ -59,8 +50,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             };
                             
                             // Save to Firestore
-                            await saveUserData(firebaseUser.uid, newUser);
-                            setUser(newUser);
+                            try {
+                                await saveUserData(firebaseUser.uid, newUser);
+                                setUser(newUser);
+                            } catch (saveError) {
+                                console.error("Error creating user in Firestore:", saveError);
+                                // Fallback to memory user so app doesn't crash
+                                setUser(newUser);
+                            }
                         }
                     }
                 } catch (error) {
@@ -69,8 +66,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setUser({
                         id: firebaseUser.uid,
                         username: firebaseUser.email || 'unknown',
-                        name: firebaseUser.displayName || 'User',
-                        role: 'Viewer'
+                        name: firebaseUser.displayName || 'کاربر مهمان',
+                        role: 'Viewer',
+                        plan: 'Free'
                     });
                 }
             } else {
@@ -110,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    // Render loading state (Blocking until Auth is determined)
+    // Render loading state
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center bg-gray-50 dir-rtl">

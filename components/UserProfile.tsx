@@ -21,7 +21,7 @@ export const UserProfile: React.FC = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 pb-20">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                     <div className="flex items-center gap-4">
@@ -29,7 +29,7 @@ export const UserProfile: React.FC = () => {
                             {getInitials()}
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold">{user.name}</h2>
+                            <h2 className="text-xl font-bold">{user.name || 'کاربر'}</h2>
                             <p className="text-slate-400 text-sm flex items-center gap-1 dir-ltr justify-end">
                                 <span>{user.email || user.username}</span>
                                 <Mail className="w-3 h-3" />
@@ -61,7 +61,7 @@ export const UserProfile: React.FC = () => {
                         <div className="flex justify-between items-center py-2">
                             <span className="text-gray-500 text-sm">سهمیه هوش مصنوعی (امروز)</span>
                             <span className="font-mono text-sm">
-                                {user.quota?.used} / {user.quota?.limit} درخواست
+                                {user.quota?.used || 0} / {user.quota?.limit || 20} درخواست
                             </span>
                         </div>
 
@@ -86,20 +86,24 @@ export const UserProfile: React.FC = () => {
                     {/* Account Settings */}
                     <div className="space-y-4">
                          <h3 className="font-bold text-gray-800 border-b pb-2">پروژه‌های فعال</h3>
-                         <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
-                             <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center text-blue-600">
-                                 <CheckCircle className="w-5 h-5" />
-                             </div>
-                             <div>
-                                 <h4 className="font-bold text-sm text-gray-800">{currentProject.name}</h4>
-                                 <p className="text-xs text-gray-500">{currentProject.tasks.length} فعالیت ثبت شده</p>
-                             </div>
-                         </div>
+                         {currentProject ? (
+                            <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
+                                <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center text-blue-600">
+                                    <CheckCircle className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-sm text-gray-800">{currentProject.name || 'پروژه من'}</h4>
+                                    <p className="text-xs text-gray-500">{currentProject.tasks?.length || 0} فعالیت ثبت شده</p>
+                                </div>
+                            </div>
+                         ) : (
+                             <div className="text-sm text-gray-500">پروژه‌ای یافت نشد.</div>
+                         )}
                     </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 border-t text-center">
-                    <button onClick={logout} className="text-red-500 text-sm hover:underline">
+                    <button onClick={logout} className="text-red-500 text-sm hover:underline font-bold">
                         خروج از حساب کاربری
                     </button>
                 </div>

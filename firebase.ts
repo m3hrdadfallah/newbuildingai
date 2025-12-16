@@ -2,12 +2,9 @@ import * as firebaseApp from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// استفاده از متغیر محیطی برای امنیت
-// کلید جدید در فایل .env.local تنظیم شده است
-const apiKey = process.env.API_KEY;
-
+// تنظیمات دقیق پروژه جدید sazyarwebapp
 const firebaseConfig = {
-  apiKey: apiKey,
+  apiKey: "AIzaSyDiVz7v-adQ6EdJJ-oFLiEPismQ4jb4SMM",
   authDomain: "sazyarwebapp.firebaseapp.com",
   projectId: "sazyarwebapp",
   storageBucket: "sazyarwebapp.firebasestorage.app",
