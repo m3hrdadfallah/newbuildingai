@@ -3,10 +3,6 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut,
-  GoogleAuthProvider,
-  signInWithPopup,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
   sendPasswordResetEmail,
   updateProfile,
   User
@@ -33,38 +29,12 @@ export const signIn = async (email: string, password: string) => {
   return await signInWithEmailAndPassword(auth, email, password);
 };
 
-// 3. Google Sign In
-export const signInWithGoogle = async () => {
-  const provider = new GoogleAuthProvider();
-  // Using popup method as requested
-  return await signInWithPopup(auth, provider);
-};
-
-// 4. Phone Authentication (OTP)
-export const setupRecaptcha = (elementId: string) => {
-  // Clear existing verifier if any to prevent duplicates
-  if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-  }
-  
-  return new RecaptchaVerifier(auth, elementId, {
-    'size': 'invisible',
-    'callback': () => {
-      // reCAPTCHA solved - allow signInWithPhoneNumber.
-    }
-  });
-};
-
-export const sendOtpToPhone = async (phoneNumber: string, appVerifier: RecaptchaVerifier) => {
-  return await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-};
-
-// 5. Password Reset
+// 3. Password Reset
 export const resetPassword = async (email: string) => {
   return await sendPasswordResetEmail(auth, email);
 };
 
-// 6. Sign Out
+// 4. Sign Out
 export const signOut = async () => {
   return await firebaseSignOut(auth);
 };
