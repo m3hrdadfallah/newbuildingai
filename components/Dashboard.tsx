@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { analyzeProjectRisks } from '../services/geminiService';
-import { Activity, AlertTriangle, TrendingUp, DollarSign, Calendar, Sparkles, Upload, Download, Save, Smartphone, Mail, Globe } from 'lucide-react';
+import { Activity, AlertTriangle, TrendingUp, DollarSign, Sparkles, Upload, Download, Save, Mail } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
     const { currentProject, updateProjectAnalysis, saveProject, importProject, exportProjectJSON } = useProject();
@@ -57,13 +57,6 @@ export const Dashboard: React.FC = () => {
         ? Math.round(currentProject.tasks.reduce((acc, t) => acc + t.percentComplete, 0) / currentProject.tasks.length) 
         : 0;
 
-    // Helper to determine login icon
-    const getLoginIcon = () => {
-        if (user?.phoneNumber) return <Smartphone className="w-4 h-4" />;
-        if (user?.email && !user.name?.includes('کاربر')) return <Globe className="w-4 h-4" />; // Assume Google if complex name? simplified assumption
-        return <Mail className="w-4 h-4" />;
-    };
-
     return (
         <div className="space-y-6">
             {/* User Welcome Card */}
@@ -71,10 +64,10 @@ export const Dashboard: React.FC = () => {
                  <div>
                     <h2 className="text-xl font-bold mb-1">سلام، {user?.name || 'کاربر گرامی'}</h2>
                     <p className="text-slate-400 text-sm flex items-center gap-2">
-                        <span className="opacity-70">روش ورود شما:</span>
+                        <span className="opacity-70">ایمیل کاربری:</span>
                         <span className="bg-slate-700 px-3 py-1 rounded-full text-white font-mono text-xs dir-ltr flex items-center gap-2 border border-slate-600">
-                            {getLoginIcon()}
-                            {user?.email || user?.phoneNumber || 'ناشناس'}
+                            <Mail className="w-3 h-3" />
+                            {user?.email || 'نامشخص'}
                         </span>
                     </p>
                 </div>
