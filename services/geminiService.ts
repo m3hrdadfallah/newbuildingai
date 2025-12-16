@@ -1,15 +1,19 @@
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
-// Ensure API Key exists
+// دریافت کلید API از تنظیمات
+// در فایل vite.config.ts این مقدار از .env.local خوانده و تزریق می‌شود
 const apiKey = process.env.API_KEY;
+
 if (!apiKey) {
-  console.warn("Gemini API Key is missing. If you are running locally, check .env.local. If deployed, ensure 'API_KEY' is set in your hosting Environment Variables.");
+  console.error("CRITICAL ERROR: API Key is missing! Check .env.local file.");
+} else {
+  console.log("Gemini Service initialized with API Key ending in:", apiKey.slice(-4));
 }
 
-const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
+const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key-to-prevent-crash' });
 
-// Use gemini-2.5-flash for all tasks to ensure stability and compliance
+// استفاده از مدل فلش برای سرعت و دقت مناسب
 const COMPLEX_MODEL = "gemini-2.5-flash";
 const FAST_MODEL = "gemini-2.5-flash"; 
 
@@ -56,9 +60,12 @@ export const quickCheckTask = async (taskTitle: string, duration: number, projec
             contents: prompt,
         });
         return response.text || "خطا در دریافت پاسخ.";
-    } catch (error) {
+    } catch (error: any) {
         console.error("Gemini API Error (QuickCheck):", error);
-        return "سرویس در حال حاضر در دسترس نیست.";
+        if (error.message?.includes('403') || error.toString().includes('403')) {
+            return "خطای دسترسی (403): ممکن است Generative AI API در کنسول گوگل برای این کلید فعال نشده باشد.";
+        }
+        return "سرویس هوش مصنوعی در دسترس نیست. لطفا اتصال اینترنت و کلید API را بررسی کنید.";
     }
 };
 
@@ -113,10 +120,10 @@ export const simulateScenario = async (
     } catch (error) {
         console.error("Simulation Error:", error);
         return {
-            impactDescription: "خطا در پردازش سناریو. لطفاً اتصال اینترنت را بررسی کنید.",
+            impactDescription: "خطا در پردازش سناریو. لطفاً از فعال بودن Generative Language API برای کلید خود اطمینان حاصل کنید.",
             costDelta: 0,
             timeDelta: 0,
-            recommendedActions: ["بررسی دستی سناریو"]
+            recommendedActions: ["بررسی تنظیمات API Key"]
         };
     }
 };
