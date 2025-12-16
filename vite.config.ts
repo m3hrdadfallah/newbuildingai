@@ -8,12 +8,10 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
     // Load env file based on `mode` in the current working directory.
-    // The third parameter '' ensures we load all env vars, not just VITE_*
     const env = loadEnv(mode, path.resolve('.'), '');
     
-    // Robustly determine the API key from various common environment variable names
-    // This fixes issues where deployment platforms use 'API_KEY' or 'GEMINI_API_KEY'
-    const apiKey = env.API_KEY || env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY || '';
+    // استفاده مستقیم از کلید ارائه شده توسط کاربر برای تضمین عملکرد هوش مصنوعی
+    const apiKey = "AIzaSyDiVz7v-adQ6EdJJ-oFLiEPismQ4jb4SMM";
 
     return {
       server: {
