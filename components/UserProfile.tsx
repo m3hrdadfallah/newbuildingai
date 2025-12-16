@@ -31,7 +31,7 @@ export const UserProfile: React.FC = () => {
                         <div>
                             <h2 className="text-xl font-bold">{user.name || 'کاربر'}</h2>
                             <p className="text-slate-400 text-sm flex items-center gap-1 dir-ltr justify-end">
-                                <span>{user.email || user.username}</span>
+                                <span>{user.email || user.username || 'No Email'}</span>
                                 <Mail className="w-3 h-3" />
                             </p>
                         </div>

@@ -32,8 +32,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     
                     if (mounted) {
                         if (userData) {
-                            // User exists in Firestore
-                            setUser({ ...userData, id: firebaseUser.uid });
+                            // User exists in Firestore - Ensure essential fields exist
+                            setUser({ 
+                                ...userData, 
+                                id: firebaseUser.uid,
+                                quota: userData.quota || { used: 0, limit: 20 },
+                                plan: userData.plan || 'Free'
+                            });
                         } else {
                             // New User -> Sync to Firestore
                             const displayName = firebaseUser.displayName || 'کاربر جدید';
@@ -52,23 +57,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             // Save to Firestore
                             try {
                                 await saveUserData(firebaseUser.uid, newUser);
-                                setUser(newUser);
                             } catch (saveError) {
                                 console.error("Error creating user in Firestore:", saveError);
-                                // Fallback to memory user so app doesn't crash
-                                setUser(newUser);
+                                // Non-fatal, continue with memory user
                             }
+                            setUser(newUser);
                         }
                     }
                 } catch (error) {
                     console.error("Error fetching user data:", error);
-                    // Minimal fallback
+                    // Robust fallback to prevent app crash
                     setUser({
                         id: firebaseUser.uid,
                         username: firebaseUser.email || 'unknown',
                         name: firebaseUser.displayName || 'کاربر مهمان',
                         role: 'Viewer',
-                        plan: 'Free'
+                        plan: 'Free',
+                        quota: { used: 0, limit: 20 }
                     });
                 }
             } else {
@@ -108,7 +113,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    // Render loading state
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center bg-gray-50 dir-rtl">

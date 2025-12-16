@@ -34,15 +34,20 @@ export const Login: React.FC = () => {
         if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
             setError('ایمیل یا رمز عبور اشتباه است.');
         } else if (errorCode === 'auth/email-already-in-use') {
-            setError('این ایمیل قبلا ثبت شده است.');
+            setError('این ایمیل قبلا ثبت شده است. لطفا وارد شوید.');
         } else if (errorCode === 'auth/weak-password') {
             setError('رمز عبور باید حداقل ۶ کاراکتر باشد.');
         } else if (errorCode === 'auth/too-many-requests') {
             setError('تعداد درخواست‌ها زیاد است. لطفا دقایقی دیگر تلاش کنید.');
         } else if (errorCode === 'auth/network-request-failed') {
-            setError('خطا در اتصال به اینترنت.');
+            setError('خطا در اتصال به اینترنت. لطفا فیلترشکن یا اتصال خود را بررسی کنید.');
+        } else if (errorCode === 'auth/operation-not-allowed') {
+            setError('ورود با ایمیل در تنظیمات فایربیس فعال نشده است.');
+        } else if (errorCode === 'auth/invalid-api-key') {
+            setError('کلید API فایربیس نامعتبر است.');
         } else {
-            setError('خطایی رخ داده است. لطفا مجددا تلاش کنید.');
+            // Show code for easier debugging
+            setError(`خطای سیستمی: ${errorCode || errorMessage}`);
         }
     };
 
@@ -54,6 +59,7 @@ export const Login: React.FC = () => {
         try {
             if (mode === 'login') {
                 await signIn(email, password);
+                // Redirect handles by AuthContext/Layout
             } else if (mode === 'register') {
                 if (!fullName.trim()) {
                     throw new Error("لطفا نام و نام خانوادگی را وارد کنید.");
@@ -90,10 +96,20 @@ export const Login: React.FC = () => {
                     </p>
                 </div>
 
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-xs font-bold flex items-center gap-2 leading-relaxed border border-red-100"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
-                {successMsg && <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-6 text-xs font-bold flex items-center gap-2 border border-green-100"><Check className="w-4 h-4 shrink-0" />{successMsg}</div>}
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-xs font-bold flex flex-col gap-1 border border-red-100 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>خطا:</span>
+                    </div>
+                    <span className="leading-relaxed">{error}</span>
+                </div>}
+                
+                {successMsg && <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-6 text-xs font-bold flex items-center gap-2 border border-green-100 animate-in fade-in slide-in-from-top-2">
+                    <Check className="w-4 h-4 shrink-0" />
+                    {successMsg}
+                </div>}
 
-                {/* Email Form */}
+                {/* Email Form Only - No Google/Phone */}
                 <form onSubmit={handleEmailAuth} className="space-y-4">
                     
                     {/* Name Input - Only for Register */}
@@ -143,8 +159,8 @@ export const Login: React.FC = () => {
                         </div>
                     )}
 
-                    <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (
+                    <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center justify-center">
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                             mode === 'forgot' ? 'ارسال لینک بازیابی' : 
                             mode === 'register' ? 'ثبت نام رایگان' : 'ورود به حساب'
                         )}
