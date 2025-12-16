@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // استفاده از متغیر محیطی برای امنیت
-// نکته مهم: حتما باید API Key مربوط به پروژه جدید (sazyarwebapp) را در فایل .env.local قرار دهید
+// کلید جدید در فایل .env.local تنظیم شده است
 const apiKey = process.env.API_KEY;
 
 const firebaseConfig = {
