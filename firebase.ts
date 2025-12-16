@@ -2,17 +2,17 @@ import * as firebaseApp from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// استفاده از متغیر محیطی برای امنیت و جلوگیری از مسدود شدن توسط گیت‌هاب
-// این مقدار از فایل .env.local خوانده می‌شود
+// استفاده از متغیر محیطی برای امنیت
+// نکته مهم: حتما باید API Key مربوط به پروژه جدید (sazyarwebapp) را در فایل .env.local قرار دهید
 const apiKey = process.env.API_KEY;
 
 const firebaseConfig = {
   apiKey: apiKey,
-  authDomain: "sazyarapp.firebaseapp.com",
-  projectId: "sazyarapp",
-  storageBucket: "sazyarapp.firebasestorage.app",
-  messagingSenderId: "200546815732",
-  appId: "1:200546815732:web:a3548a43e25cccac2a98a1"
+  authDomain: "sazyarwebapp.firebaseapp.com",
+  projectId: "sazyarwebapp",
+  storageBucket: "sazyarwebapp.firebasestorage.app",
+  messagingSenderId: "196151116296",
+  appId: "1:196151116296:web:07e170fe1ec874ddd047bd"
 };
 
 // Initialize Firebase
