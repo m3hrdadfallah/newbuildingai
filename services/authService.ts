@@ -9,14 +9,11 @@ import {
   signInWithPopup
 } from "firebase/auth";
 
-// --- Authentication Methods ---
-
 /**
  * ورود با اکانت گوگل
  */
 export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  // تنظیم زبان به فارسی برای رابط کاربری گوگل
   auth.languageCode = 'fa';
   try {
     const result = await signInWithPopup(auth, provider);
