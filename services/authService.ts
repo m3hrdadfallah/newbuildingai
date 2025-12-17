@@ -2,16 +2,15 @@ import { auth } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  signOut as firebaseSignOut,
-  sendPasswordResetEmail,
-  updateProfile,
-  User
+  sendPasswordResetEmail, 
+  signOut as firebaseSignOut, 
+  updateProfile 
 } from "firebase/auth";
 
 // --- Standard Authentication Methods ---
 
 // 1. Register with Email & Password
-export const registerWithEmail = async (email: string, password: string, fullName: string): Promise<User> => {
+export const registerWithEmail = async (email: string, password: string, fullName: string) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   
   // Update display name immediately
@@ -25,7 +24,6 @@ export const registerWithEmail = async (email: string, password: string, fullNam
 
 // 2. Sign In with Email & Password
 export const signIn = async (email: string, password: string) => {
-  // Using standard firebase method
   return await signInWithEmailAndPassword(auth, email, password);
 };
 

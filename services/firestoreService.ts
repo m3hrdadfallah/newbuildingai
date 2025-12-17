@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection } from "firebase/firestore";
 import { Project, User as AppUser } from '../types';
 
 // ذخیره اطلاعات پروفایل کاربر

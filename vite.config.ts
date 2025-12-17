@@ -10,8 +10,8 @@ export default defineConfig(({ mode }) => {
     // Load env file based on `mode` in the current working directory.
     const env = loadEnv(mode, path.resolve('.'), '');
     
-    // استفاده مستقیم از کلید ارائه شده توسط کاربر برای تضمین عملکرد هوش مصنوعی
-    const apiKey = "AIzaSyDiVz7v-adQ6EdJJ-oFLiEPismQ4jb4SMM";
+    // کلید اصلی پروژه که در فایل firebase.ts هم استفاده شده است
+    const apiKey = "AIzaSyCf5NGycTd_K2ntf-Nd1uiWd7NfEFJVq28";
 
     return {
       server: {
