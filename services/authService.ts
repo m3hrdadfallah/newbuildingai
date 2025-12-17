@@ -11,15 +11,24 @@ import {
 
 // --- Authentication Methods ---
 
-// 1. Google Sign-In
+/**
+ * ورود با اکانت گوگل
+ */
 export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  // اضافه کردن زبان فارسی به رابط گوگل
+  // تنظیم زبان به فارسی برای رابط کاربری گوگل
   auth.languageCode = 'fa';
-  return await signInWithPopup(auth, provider);
+  try {
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
+  } catch (error) {
+    throw error;
+  }
 };
 
-// 2. Register with Email & Password
+/**
+ * ثبت‌نام با ایمیل و رمز عبور
+ */
 export const registerWithEmail = async (email: string, password: string, fullName: string) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   
@@ -31,17 +40,23 @@ export const registerWithEmail = async (email: string, password: string, fullNam
   return userCredential.user;
 };
 
-// 3. Sign In with Email & Password
+/**
+ * ورود با ایمیل و رمز عبور
+ */
 export const signIn = async (email: string, password: string) => {
   return await signInWithEmailAndPassword(auth, email, password);
 };
 
-// 4. Password Reset
+/**
+ * فراموشی رمز عبور
+ */
 export const resetPassword = async (email: string) => {
   return await sendPasswordResetEmail(auth, email);
 };
 
-// 5. Sign Out
+/**
+ * خروج از حساب
+ */
 export const signOut = async () => {
   return await firebaseSignOut(auth);
 };
