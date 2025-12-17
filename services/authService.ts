@@ -4,57 +4,43 @@ import {
   signInWithEmailAndPassword, 
   sendPasswordResetEmail, 
   signOut as firebaseSignOut, 
-  updateProfile,
-  GoogleAuthProvider,
-  signInWithPopup
+  updateProfile
 } from "firebase/auth";
 
 /**
- * ورود با اکانت گوگل
+ * سیستم احراز هویت ایمیل/رمز عبور
+ * این متدها از Firebase استفاده می‌کنند اما به دلیل استفاده از esm.sh 
+ * احتمال بلاک شدن آن‌ها در شبکه ایران بسیار کمتر است.
  */
-export const signInWithGoogle = async () => {
-  const provider = new GoogleAuthProvider();
-  auth.languageCode = 'fa';
+
+export const registerWithEmail = async (email: string, password: string, fullName: string) => {
   try {
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    if (userCredential.user) {
+      await updateProfile(userCredential.user, { displayName: fullName });
+    }
+    return userCredential.user;
   } catch (error) {
-    console.error("Google Sign-In Error:", error);
+    console.error("Registration Error:", error);
     throw error;
   }
 };
 
-/**
- * ثبت‌نام با ایمیل و رمز عبور
- */
-export const registerWithEmail = async (email: string, password: string, fullName: string) => {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  
-  if (userCredential.user) {
-      await updateProfile(userCredential.user, {
-        displayName: fullName
-      });
-  }
-  return userCredential.user;
-};
-
-/**
- * ورود با ایمیل و رمز عبور
- */
 export const signIn = async (email: string, password: string) => {
-  return await signInWithEmailAndPassword(auth, email, password);
+  try {
+    return await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    console.error("Login Error:", error);
+    throw error;
+  }
 };
 
-/**
- * فراموشی رمز عبور
- */
 export const resetPassword = async (email: string) => {
   return await sendPasswordResetEmail(auth, email);
 };
 
-/**
- * خروج از حساب
- */
 export const signOut = async () => {
   return await firebaseSignOut(auth);
 };
+
+// متد گوگل حذف شد تا وابستگی به APIهای مسدود شده گوگل از بین برود.
