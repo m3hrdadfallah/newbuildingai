@@ -1,26 +1,22 @@
+
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
 /**
- * ایجاد نمونه SDK هوش مصنوعی
- * از کلیدی که در vite.config.ts تعریف کردیم استفاده می‌کند
+ * ایجاد نمونه SDK هوش مصنوعی سازیار
+ * مطابق با استانداردهای گوگل جمنای
  */
-const getAI = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("API_KEY_MISSING");
-  }
-  return new GoogleGenAI({ apiKey });
-};
 
-// استفاده از مدل فلش ۳ که سریع‌ترین و پایدارترین گزینه رایگان است
-const MODEL_NAME = 'gemini-3-flash-preview';
+// مدل‌های پیشنهادی براساس نوع وظیفه
+const FLASH_MODEL = 'gemini-3-flash-preview';
+const PRO_MODEL = 'gemini-3-pro-preview';
 
 export const createChatSession = (): Chat => {
     try {
-        const ai = getAI();
+        // Fix: Use direct initialization with process.env.API_KEY as per guidelines
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         return ai.chats.create({
-            model: MODEL_NAME,
+            model: FLASH_MODEL,
             config: {
                 systemInstruction: `شما "سازیار" هستید، دستیار هوشمند مهندسی ساخت و ساز. 
                 اطلاعات فنی پروژه شامل متراژ، نوع سازه و زمان‌بندی را در اختیار دارید. 
@@ -36,15 +32,16 @@ export const createChatSession = (): Chat => {
 
 export const quickCheckTask = async (taskTitle: string, duration: number, projectDetails?: ProjectDetails): Promise<string> => {
     try {
-        const ai = getAI();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `پروژه: ${projectDetails?.dimensions.structureType} - ${projectDetails?.dimensions.infrastructureArea} مترمربع.
         فعالیت: "${taskTitle}" با زمان ${duration} روز. 
         آیا این زمان‌بندی منطقی است؟ پاسخ در حداکثر ۲ جمله فارسی.`;
 
         const response: GenerateContentResponse = await ai.models.generateContent({
-            model: MODEL_NAME,
+            model: FLASH_MODEL,
             contents: prompt,
         });
+        // Fix: Access .text property directly (not a method)
         return response.text || "پاسخی دریافت نشد.";
     } catch (error: any) {
         console.error("AI Quick Check Error:", error);
@@ -54,15 +51,16 @@ export const quickCheckTask = async (taskTitle: string, duration: number, projec
 
 export const analyzeProjectRisks = async (project: Project): Promise<any> => {
     try {
-        const ai = getAI();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `تحلیل ریسک برای پروژه ${project.name}. تعداد فعالیت‌ها: ${project.tasks.length}. 
         خروجی را فقط به صورت JSON معتبر شامل امتیاز (projectScore) و لیست هشدارها (alerts) بده.`;
 
         const response = await ai.models.generateContent({
-            model: MODEL_NAME,
+            model: PRO_MODEL, // Use Pro model for complex analysis
             contents: prompt,
             config: { responseMimeType: "application/json" }
         });
+        // Fix: Use .text property
         return JSON.parse(response.text || "{}");
     } catch (error) {
         console.error("Risk Analysis Error:", error);
@@ -72,30 +70,32 @@ export const analyzeProjectRisks = async (project: Project): Promise<any> => {
 
 export const simulateScenario = async (project: Project, scenarioDescription: string): Promise<any> => {
     try {
-        const ai = getAI();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `سناریو: ${scenarioDescription}. تاثیر بر هزینه و زمان پروژه را در قالب JSON با فیلدهای costDelta و timeDelta و impactDescription برگردان.`;
 
         const response = await ai.models.generateContent({
-            model: MODEL_NAME,
+            model: PRO_MODEL,
             contents: prompt,
             config: { responseMimeType: "application/json" }
         });
+        // Fix: Use .text property
         return JSON.parse(response.text || "{}");
     } catch (error) {
-        return { impactDescription: "خطا در برقراری ارتباط با مدل Pro", costDelta: 0, timeDelta: 0, recommendedActions: [] };
+        return { impactDescription: "خطا در تحلیل سناریو", costDelta: 0, timeDelta: 0, recommendedActions: [] };
     }
 };
 
 export const suggestProjectResources = async (project: Project): Promise<any[]> => {
     try {
-        const ai = getAI();
-        const prompt = `لیست منابع پیشنهادی برای سازه ${project.details.dimensions.structureType} را به صورت آرایه JSON شامل name, unit, estimatedRate بده.`;
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `لیست منابع پیشنهادی برای سازه ${project.details.dimensions.structureType} را به صورت آرایه JSON شامل name, type, unit, estimatedRate بده.`;
 
         const response = await ai.models.generateContent({
-            model: MODEL_NAME,
+            model: PRO_MODEL,
             contents: prompt,
             config: { responseMimeType: "application/json" }
         });
+        // Fix: Use .text property
         return JSON.parse(response.text || "[]");
     } catch (error) {
         return [];

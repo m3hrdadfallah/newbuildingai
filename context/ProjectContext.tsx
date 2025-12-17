@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Project, Task, Resource, AIAlert, ProjectDetails } from '../types';
 import { useAuth } from './AuthContext';
-import { auth } from '../firebase';
+// Removed invalid auth import from firebase as it's no longer exported or used
 import { saveProjectData, getProjectData } from '../services/firestoreService';
 
 interface ProjectContextType {
@@ -82,16 +83,17 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         let isMounted = true;
         
         const loadProject = async () => {
-            if (user && auth.currentUser) {
+            // Updated to use user from useAuth() hook instead of Firebase Auth directly
+            if (user) {
                 setIsLoadingData(true);
                 try {
-                    const savedProject = await getProjectData(auth.currentUser.uid);
+                    const savedProject = await getProjectData(user.uid);
                     if (isMounted) {
                         if (savedProject && savedProject.tasks) {
                             setCurrentProject(savedProject);
                         } else {
                             // First time or empty
-                            await saveProjectData(auth.currentUser.uid, DEFAULT_PROJECT);
+                            await saveProjectData(user.uid, DEFAULT_PROJECT);
                             setCurrentProject(DEFAULT_PROJECT);
                         }
                     }
@@ -133,9 +135,10 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     const updateProjectAnalysis = (riskScore: number, alerts: AIAlert[]) => updateProjectState(prev => ({ ...prev, projectRiskScore: riskScore, aiAlerts: alerts }));
 
     const saveProject = async () => {
-        if (auth.currentUser) {
+        // Updated to use user from AuthContext
+        if (user) {
             try {
-                await saveProjectData(auth.currentUser.uid, currentProject);
+                await saveProjectData(user.uid, currentProject);
                 console.log("Project saved to Firebase!");
             } catch (error) {
                 console.error("Error saving project:", error);
@@ -151,8 +154,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                 return;
             }
             setCurrentProject(data);
-            if (auth.currentUser) {
-                await saveProjectData(auth.currentUser.uid, data);
+            // Updated to use user from AuthContext
+            if (user) {
+                await saveProjectData(user.uid, data);
             }
             alert("پروژه با موفقیت بارگذاری شد.");
         } catch (error) {
