@@ -2,74 +2,61 @@ import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
 /**
- * مقداردهی اولیه هوش مصنوعی. 
- * کلید API مستقیماً از process.env.API_KEY که در vite.config تعریف شده خوانده می‌شود.
+ * ایجاد نمونه SDK هوش مصنوعی
+ * از کلیدی که در vite.config.ts تعریف کردیم استفاده می‌کند
  */
 const getAI = () => {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API_KEY_NOT_FOUND");
+  if (!apiKey || apiKey === "undefined") {
+    throw new Error("API_KEY_MISSING");
   }
   return new GoogleGenAI({ apiKey });
 };
 
-// استفاده از مدل‌های پیشنهادی برای پایداری بیشتر
+// استفاده از مدل فلش ۳ که سریع‌ترین و پایدارترین گزینه رایگان است
 const MODEL_NAME = 'gemini-3-flash-preview';
 
 export const createChatSession = (): Chat => {
-    const ai = getAI();
-    return ai.chats.create({
-        model: MODEL_NAME,
-        config: {
-            systemInstruction: `شما "سازیار" هستید، یک دستیار هوشمند مدیریت پروژه ساختمانی.
-            وظیفه شما تحلیل زمان‌بندی، هزینه و ریسک‌های اجرایی است.
-            همیشه پاسخ‌ها را به زبان فارسی فنی و مهندسی ارائه دهید.`,
-        }
-    });
+    try {
+        const ai = getAI();
+        return ai.chats.create({
+            model: MODEL_NAME,
+            config: {
+                systemInstruction: `شما "سازیار" هستید، دستیار هوشمند مهندسی ساخت و ساز. 
+                اطلاعات فنی پروژه شامل متراژ، نوع سازه و زمان‌بندی را در اختیار دارید. 
+                وظیفه شما راهنمایی در مورد استانداردهای نظام مهندسی، تحلیل تاخیرات و برآورد مصالح است.
+                پاسخ‌ها را فارسی، دقیق و حرفه‌ای ارائه دهید.`,
+            }
+        });
+    } catch (e) {
+        console.error("Failed to start AI session", e);
+        throw e;
+    }
 };
 
 export const quickCheckTask = async (taskTitle: string, duration: number, projectDetails?: ProjectDetails): Promise<string> => {
     try {
         const ai = getAI();
-        const prompt = `فعالیت: ${taskTitle}\nمدت زمان پیشنهادی: ${duration} روز\nآیا این زمان‌بندی منطقی است؟ لطفاً بر اساس استانداردهای مهندسی عمران پاسخ کوتاه بدهید.`;
+        const prompt = `پروژه: ${projectDetails?.dimensions.structureType} - ${projectDetails?.dimensions.infrastructureArea} مترمربع.
+        فعالیت: "${taskTitle}" با زمان ${duration} روز. 
+        آیا این زمان‌بندی منطقی است؟ پاسخ در حداکثر ۲ جمله فارسی.`;
 
         const response: GenerateContentResponse = await ai.models.generateContent({
             model: MODEL_NAME,
             contents: prompt,
         });
-        return response.text || "پاسخی از مدل دریافت نشد.";
-    } catch (error) {
-        console.error("Gemini Error:", error);
-        return "خطا در برقراری ارتباط با هوش مصنوعی. لطفاً اینترنت خود را چک کنید.";
+        return response.text || "پاسخی دریافت نشد.";
+    } catch (error: any) {
+        console.error("AI Quick Check Error:", error);
+        return "سرویس هوش مصنوعی موقتاً در دسترس نیست یا کلید API محدود شده است.";
     }
 };
 
 export const analyzeProjectRisks = async (project: Project): Promise<any> => {
     try {
         const ai = getAI();
-        const prompt = `تحلیل ریسک برای پروژه: ${project.name}\nتعداد فعالیت‌ها: ${project.tasks.length}\nخروجی را به صورت JSON شامل امتیاز سلامت (0-100) و لیست هشدارها بده.`;
-
-        const response = await ai.models.generateContent({
-            model: MODEL_NAME,
-            contents: prompt,
-            config: { responseMimeType: "application/json" }
-        });
-        
-        try {
-            return JSON.parse(response.text || "{}");
-        } catch (e) {
-            return { projectScore: 80, alerts: [] };
-        }
-    } catch (error) {
-        console.error("Risk Analysis Error:", error);
-        return null;
-    }
-};
-
-export const simulateScenario = async (project: Project, scenarioDescription: string): Promise<any> => {
-    try {
-        const ai = getAI();
-        const prompt = `شبیه‌سازی سناریو: ${scenarioDescription}\nتاثیر بر پروژه ${project.name} چیست؟ خروجی JSON شامل costDelta و timeDelta باشد.`;
+        const prompt = `تحلیل ریسک برای پروژه ${project.name}. تعداد فعالیت‌ها: ${project.tasks.length}. 
+        خروجی را فقط به صورت JSON معتبر شامل امتیاز (projectScore) و لیست هشدارها (alerts) بده.`;
 
         const response = await ai.models.generateContent({
             model: MODEL_NAME,
@@ -78,15 +65,31 @@ export const simulateScenario = async (project: Project, scenarioDescription: st
         });
         return JSON.parse(response.text || "{}");
     } catch (error) {
-        console.error("Simulation Error:", error);
-        return { impactDescription: "خطا در شبیه‌سازی", costDelta: 0, timeDelta: 0, recommendedActions: [] };
+        console.error("Risk Analysis Error:", error);
+        return { projectScore: 70, alerts: [{type: 'Error', severity: 'warning', message: 'خطا در تحلیل هوشمند'}] };
+    }
+};
+
+export const simulateScenario = async (project: Project, scenarioDescription: string): Promise<any> => {
+    try {
+        const ai = getAI();
+        const prompt = `سناریو: ${scenarioDescription}. تاثیر بر هزینه و زمان پروژه را در قالب JSON با فیلدهای costDelta و timeDelta و impactDescription برگردان.`;
+
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: prompt,
+            config: { responseMimeType: "application/json" }
+        });
+        return JSON.parse(response.text || "{}");
+    } catch (error) {
+        return { impactDescription: "خطا در برقراری ارتباط با مدل Pro", costDelta: 0, timeDelta: 0, recommendedActions: [] };
     }
 };
 
 export const suggestProjectResources = async (project: Project): Promise<any[]> => {
     try {
         const ai = getAI();
-        const prompt = `لیست منابع پیشنهادی برای پروژه ${project.details.dimensions.structureType} با زیربنای ${project.details.dimensions.infrastructureArea} متر مربع در قالب آرایه JSON.`;
+        const prompt = `لیست منابع پیشنهادی برای سازه ${project.details.dimensions.structureType} را به صورت آرایه JSON شامل name, unit, estimatedRate بده.`;
 
         const response = await ai.models.generateContent({
             model: MODEL_NAME,
@@ -95,7 +98,6 @@ export const suggestProjectResources = async (project: Project): Promise<any[]> 
         });
         return JSON.parse(response.text || "[]");
     } catch (error) {
-        console.error("Resource Suggestion Error:", error);
         return [];
     }
 };

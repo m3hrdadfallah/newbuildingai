@@ -7,11 +7,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
-    // Load env file based on `mode` in the current working directory.
+    // بارگذاری متغیرهای محیطی از فایل .env در صورت وجود
     const env = loadEnv(mode, path.resolve('.'), '');
     
-    // کلید اختصاصی شما که درخواست کردید تغییر نکند
-    const userApiKey = "AIzaSyCf5NGycTd_K2ntf-Nd1uiWd7NfEFJVq28";
+    /**
+     * کلید اختصاصی شما: AIzaSyCf5NGycTd_K2ntf-Nd1uiWd7NfEFJVq28
+     * این کلید باید هم برای فایربیس و هم برای Gemini (در صورت یکی بودن تنظیمات کنسول گوگل) استفاده شود.
+     * اگر کلید Gemini متفاوت است، مقدار env.GEMINI_API_KEY را جایگزین کنید.
+     */
+    const KEY_TO_USE = env.GEMINI_API_KEY || "AIzaSyCf5NGycTd_K2ntf-Nd1uiWd7NfEFJVq28";
 
     return {
       server: {
@@ -20,8 +24,8 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        // تزریق کلید به عنوان متغیر محیطی برای استفاده در SDK
-        'process.env.API_KEY': JSON.stringify(userApiKey),
+        // این بخش باعث می‌شود در کل پروژه process.env.API_KEY قابل استفاده باشد
+        'process.env.API_KEY': JSON.stringify(KEY_TO_USE),
       },
       resolve: {
         alias: {
