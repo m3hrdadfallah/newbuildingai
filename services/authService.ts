@@ -4,16 +4,25 @@ import {
   signInWithEmailAndPassword, 
   sendPasswordResetEmail, 
   signOut as firebaseSignOut, 
-  updateProfile 
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 
-// --- Standard Authentication Methods ---
+// --- Authentication Methods ---
 
-// 1. Register with Email & Password
+// 1. Google Sign-In
+export const signInWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
+  // اضافه کردن زبان فارسی به رابط گوگل
+  auth.languageCode = 'fa';
+  return await signInWithPopup(auth, provider);
+};
+
+// 2. Register with Email & Password
 export const registerWithEmail = async (email: string, password: string, fullName: string) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   
-  // Update display name immediately
   if (userCredential.user) {
       await updateProfile(userCredential.user, {
         displayName: fullName
@@ -22,17 +31,17 @@ export const registerWithEmail = async (email: string, password: string, fullNam
   return userCredential.user;
 };
 
-// 2. Sign In with Email & Password
+// 3. Sign In with Email & Password
 export const signIn = async (email: string, password: string) => {
   return await signInWithEmailAndPassword(auth, email, password);
 };
 
-// 3. Password Reset
+// 4. Password Reset
 export const resetPassword = async (email: string) => {
   return await sendPasswordResetEmail(auth, email);
 };
 
-// 4. Sign Out
+// 5. Sign Out
 export const signOut = async () => {
   return await firebaseSignOut(auth);
 };

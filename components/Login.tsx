@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
-import { signIn, registerWithEmail, resetPassword } from '../services/authService';
+import { signIn, registerWithEmail, resetPassword, signInWithGoogle } from '../services/authService';
 import { Lock, Mail, AlertCircle, Loader2, Check, User as UserIcon, ArrowLeft } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'forgot';
 
 export const Login: React.FC = () => {
     const [mode, setMode] = useState<AuthMode>('login');
-    
-    // Form States
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    
-    // UX States
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -23,31 +19,29 @@ export const Login: React.FC = () => {
         setLoading(false);
     };
 
-    // Helper for error messages
     const handleAuthError = (err: any) => {
-        console.error("Auth Error Details:", err);
+        console.error("Auth Error:", err);
         setLoading(false);
-
         const errorCode = err.code;
-        const errorMessage = err.message || '';
 
-        if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+        if (errorCode === 'auth/network-request-failed') {
+            setError('خطا در اتصال به سرور! اگر از VPN استفاده نمی‌کنید، لطفاً از DNSهای رفع تحریم (مثل Shecan یا 403.online) استفاده کنید.');
+        } else if (errorCode === 'auth/popup-closed-by-user') {
+            setError('پنجره ورود بسته شد.');
+        } else if (errorCode === 'auth/invalid-credential') {
             setError('ایمیل یا رمز عبور اشتباه است.');
-        } else if (errorCode === 'auth/email-already-in-use') {
-            setError('این ایمیل قبلا ثبت شده است. لطفا وارد شوید.');
-        } else if (errorCode === 'auth/weak-password') {
-            setError('رمز عبور باید حداقل ۶ کاراکتر باشد.');
-        } else if (errorCode === 'auth/too-many-requests') {
-            setError('تعداد درخواست‌ها زیاد است. لطفا دقایقی دیگر تلاش کنید.');
-        } else if (errorCode === 'auth/network-request-failed') {
-            setError('خطا در اتصال به اینترنت. لطفا فیلترشکن یا اتصال خود را بررسی کنید.');
-        } else if (errorCode === 'auth/operation-not-allowed') {
-            setError('ورود با ایمیل در تنظیمات فایربیس فعال نشده است.');
-        } else if (errorCode === 'auth/invalid-api-key') {
-            setError('کلید API فایربیس نامعتبر است.');
         } else {
-            // Show code for easier debugging
-            setError(`خطای سیستمی: ${errorCode || errorMessage}`);
+            setError(`خطا: ${err.message}`);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        resetState();
+        setLoading(true);
+        try {
+            await signInWithGoogle();
+        } catch (err: any) {
+            handleAuthError(err);
         }
     };
 
@@ -55,140 +49,90 @@ export const Login: React.FC = () => {
         e.preventDefault();
         resetState();
         setLoading(true);
-        
         try {
             if (mode === 'login') {
                 await signIn(email, password);
-                // Redirect handles by AuthContext/Layout
             } else if (mode === 'register') {
-                if (!fullName.trim()) {
-                    throw new Error("لطفا نام و نام خانوادگی را وارد کنید.");
-                }
+                if (!fullName.trim()) throw new Error("لطفا نام کامل را وارد کنید.");
                 await registerWithEmail(email, password, fullName);
             } else if (mode === 'forgot') {
-                if (!email) throw new Error("لطفا ایمیل را وارد کنید.");
                 await resetPassword(email);
-                setSuccessMsg('لینک بازیابی رمز عبور به ایمیل شما ارسال شد.');
-                setLoading(false);
+                setSuccessMsg('لینک بازیابی ارسال شد.');
             }
         } catch (err: any) {
-            if (err.message === "لطفا نام و نام خانوادگی را وارد کنید." || err.message === "لطفا ایمیل را وارد کنید.") {
-                setError(err.message);
-                setLoading(false);
-            } else {
-                handleAuthError(err);
-            }
+            handleAuthError(err);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-[Vazirmatn]">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-[Vazirmatn] dir-rtl">
             <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
-                
-                {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-2xl font-black text-slate-900 mb-2">
-                         {mode === 'forgot' ? 'بازیابی رمز عبور' : 
-                         mode === 'register' ? 'ثبت‌نام در سازیار' : 'ورود به سازیار'}
+                         {mode === 'forgot' ? 'بازیابی رمز عبور' : mode === 'register' ? 'ثبت‌نام در سازیار' : 'ورود به سازیار'}
                     </h1>
-                    <p className="text-gray-500 text-sm">
-                        {mode === 'forgot' ? 'ایمیل خود را وارد کنید' : 'برای دسترسی به داشبورد وارد شوید'}
-                    </p>
                 </div>
 
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-xs font-bold flex flex-col gap-1 border border-red-100 animate-in fade-in slide-in-from-top-2">
-                    <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span>خطا:</span>
+                {error && <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-xs font-bold border border-red-100 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span className="leading-relaxed">{error}</span>
                     </div>
-                    <span className="leading-relaxed">{error}</span>
                 </div>}
                 
-                {successMsg && <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-6 text-xs font-bold flex items-center gap-2 border border-green-100 animate-in fade-in slide-in-from-top-2">
-                    <Check className="w-4 h-4 shrink-0" />
-                    {successMsg}
+                {successMsg && <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-6 text-xs font-bold border border-green-100">
+                    <Check className="w-4 h-4 shrink-0" /> {successMsg}
                 </div>}
 
-                {/* Email Form Only - No Google/Phone */}
-                <form onSubmit={handleEmailAuth} className="space-y-4">
-                    
-                    {/* Name Input - Only for Register */}
-                    {mode === 'register' && (
-                        <div className="relative">
-                            <input 
-                                type="text" 
-                                value={fullName}
-                                onChange={(e) => setFullName(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                placeholder="نام و نام خانوادگی"
-                                required
-                            />
-                            <UserIcon className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
-                        </div>
-                    )}
-
-                    <div className="relative">
-                        <input 
-                            type="email" 
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-left dir-ltr"
-                            placeholder="name@example.com"
-                            required
-                        />
-                        <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
-                    </div>
-                    
-                    {mode !== 'forgot' && (
-                        <div className="relative">
-                            <input 
-                                type="password" 
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-left dir-ltr"
-                                placeholder="رمز عبور"
-                                required
-                            />
-                            <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
-                        </div>
-                    )}
-
-                    {mode === 'login' && (
-                        <div className="text-left">
-                            <button type="button" onClick={() => { setMode('forgot'); resetState(); }} className="text-xs text-blue-600 font-medium hover:underline">رمز عبور را فراموش کردید؟</button>
-                        </div>
-                    )}
-
-                    <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center justify-center">
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                            mode === 'forgot' ? 'ارسال لینک بازیابی' : 
-                            mode === 'register' ? 'ثبت نام رایگان' : 'ورود به حساب'
-                        )}
+                <div className="space-y-4">
+                    {/* Google Login Button */}
+                    <button 
+                        onClick={handleGoogleLogin}
+                        disabled={loading}
+                        className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 py-3 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
+                    >
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" className="w-5 h-5" alt="Google" />
+                        ورود سریع با گوگل
                     </button>
 
-                    {mode === 'forgot' && (
-                        <button type="button" onClick={() => { setMode('login'); resetState(); }} className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-800 mt-2">
-                            <ArrowLeft className="w-4 h-4" />
-                            بازگشت به ورود
-                        </button>
-                    )}
-                </form>
+                    <div className="relative flex items-center gap-4 py-2">
+                        <div className="flex-1 h-px bg-gray-200"></div>
+                        <span className="text-[10px] text-gray-400 uppercase">یا از طریق ایمیل</span>
+                        <div className="flex-1 h-px bg-gray-200"></div>
+                    </div>
 
-                {/* Separator */}
-                {(mode === 'login' || mode === 'register') && (
-                    <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-                        <p className="text-sm text-gray-500 mb-2">
-                             {mode === 'login' ? 'هنوز حساب کاربری ندارید؟' : 'قبلاً ثبت‌نام کرده‌اید؟'}
-                        </p>
+                    <form onSubmit={handleEmailAuth} className="space-y-4">
+                        {mode === 'register' && (
+                            <div className="relative">
+                                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="نام و نام خانوادگی" required />
+                                <UserIcon className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
+                            </div>
+                        )}
+                        <div className="relative">
+                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left dir-ltr" placeholder="ایمیل" required />
+                            <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
+                        </div>
+                        {mode !== 'forgot' && (
+                            <div className="relative">
+                                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left dir-ltr" placeholder="رمز عبور" required />
+                                <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
+                            </div>
+                        )}
+
+                        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg flex items-center justify-center">
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (mode === 'forgot' ? 'ارسال لینک' : mode === 'register' ? 'ثبت نام' : 'ورود به حساب')}
+                        </button>
+                    </form>
+
+                    <div className="text-center pt-4">
                         <button 
-                            type="button"
                             onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); resetState(); }}
-                            className="text-sm text-blue-600 font-bold hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors"
+                            className="text-sm text-blue-600 font-bold hover:underline"
                         >
-                            {mode === 'login' ? 'ساخت حساب جدید' : 'وارد شوید'}
+                            {mode === 'login' ? 'هنوز حساب ندارید؟ ثبت‌نام' : 'قبلاً عضو شده‌اید؟ ورود'}
                         </button>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
