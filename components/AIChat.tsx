@@ -14,18 +14,22 @@ export const AIChat: React.FC = () => {
     const chatSessionRef = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        try {
-            if (!chatSessionRef.current) {
+    // Initialize session lazily or on demand
+    const getSession = () => {
+        if (!chatSessionRef.current) {
+            try {
                 chatSessionRef.current = createChatSession();
+            } catch (e) {
+                console.error("Session creation failed", e);
             }
-        } catch (e) {
-            console.error("Failed to initialize chat session", e);
         }
-    }, []);
+        return chatSessionRef.current;
+    };
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (isOpen) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
     }, [messages, isOpen]);
 
     const handleSend = async () => {
@@ -43,17 +47,18 @@ export const AIChat: React.FC = () => {
         setIsLoading(true);
 
         try {
-            if (!chatSessionRef.current) {
-                 chatSessionRef.current = createChatSession();
+            const session = getSession();
+            if (!session) {
+                throw new Error("SESSION_INIT_ERROR");
             }
             
-            const result = await chatSessionRef.current.sendMessage({ message: userMsg.text });
+            const result = await session.sendMessage({ message: userMsg.text });
             const responseText = result.text;
             
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: responseText,
+                text: responseText || "پاسخی دریافت نشد.",
                 timestamp: Date.now()
             }]);
         } catch (error: any) {
@@ -61,13 +66,12 @@ export const AIChat: React.FC = () => {
             
             let errorMsg = 'متاسفانه خطایی در ارتباط با سرور رخ داد.';
             
-            // Check for common errors
-            if (error.message?.includes('API key') || error.toString().includes('API key')) {
-                errorMsg = 'خطای تنظیمات: کلید API یافت نشد. لطفا تنظیمات محیطی (API_KEY) را بررسی کنید.';
-            } else if (error.message?.includes('404') || error.message?.includes('not found')) {
-                errorMsg = 'مدل هوش مصنوعی در دسترس نیست (404). لطفا بعدا تلاش کنید.';
+            if (error.message?.includes('403') || error.toString().includes('403')) {
+                errorMsg = 'خطای دسترسی (403): کلید API شما اجازه استفاده از این مدل هوش مصنوعی را ندارد یا منقضی شده است.';
+            } else if (error.message?.includes('API_KEY_MISSING') || error.message === "SESSION_INIT_ERROR") {
+                errorMsg = 'تنظیمات کلید API ناقص است. لطفا فایل پیکربندی را چک کنید.';
             } else if (error.message?.includes('fetch failed')) {
-                errorMsg = 'خطای شبکه. لطفا اتصال اینترنت خود را بررسی کنید.';
+                errorMsg = 'خطای شبکه: اتصال به سرویس گوگل برقرار نشد. لطفا اینترنت خود را بررسی کنید.';
             }
 
             setMessages(prev => [...prev, {

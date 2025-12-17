@@ -10,8 +10,8 @@ export default defineConfig(({ mode }) => {
     // Load env file based on `mode` in the current working directory.
     const env = loadEnv(mode, path.resolve('.'), '');
     
-    // کلید اصلی پروژه که در فایل firebase.ts هم استفاده شده است
-    const apiKey = "AIzaSyCf5NGycTd_K2ntf-Nd1uiWd7NfEFJVq28";
+    // کلید اختصاصی شما که درخواست کردید تغییر نکند
+    const userApiKey = "AIzaSyCf5NGycTd_K2ntf-Nd1uiWd7NfEFJVq28";
 
     return {
       server: {
@@ -20,7 +20,8 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(apiKey),
+        // تزریق کلید به عنوان متغیر محیطی برای استفاده در SDK
+        'process.env.API_KEY': JSON.stringify(userApiKey),
       },
       resolve: {
         alias: {

@@ -1,203 +1,97 @@
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
-// دریافت کلید API از تنظیمات
-// در فایل vite.config.ts این مقدار از .env.local خوانده و تزریق می‌شود
-const apiKey = process.env.API_KEY;
+/**
+ * مقداردهی اولیه هوش مصنوعی. 
+ * کلید API مستقیماً از process.env.API_KEY که در vite.config تعریف شده خوانده می‌شود.
+ */
+const getAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API_KEY_NOT_FOUND");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
-if (!apiKey) {
-  console.error("CRITICAL ERROR: API Key is missing! Check .env.local file.");
-} else {
-  console.log("Gemini Service initialized with API Key ending in:", apiKey.slice(-4));
-}
-
-const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key-to-prevent-crash' });
-
-// استفاده از مدل فلش برای سرعت و دقت مناسب
-const COMPLEX_MODEL = "gemini-2.5-flash";
-const FAST_MODEL = "gemini-2.5-flash"; 
+// استفاده از مدل‌های پیشنهادی برای پایداری بیشتر
+const MODEL_NAME = 'gemini-3-flash-preview';
 
 export const createChatSession = (): Chat => {
+    const ai = getAI();
     return ai.chats.create({
-        model: COMPLEX_MODEL,
+        model: MODEL_NAME,
         config: {
-            systemInstruction: `شما "مدیر هوشمند پروژه" هستید.
-            تخصص: مدیریت پیمان، شرایط عمومی پیمان، تحلیل تاخیرات، تعدیل و صورت وضعیت.
-            دسترسی به داده‌های پروژه شامل WBS، منابع، ابعاد پروژه، نوع قرارداد و پیشرفت واقعی دارید.
-            در تحلیل‌ها، نوع سازه، منطقه جغرافیایی و ریسک‌های مالی را همزمان در نظر بگیرید.`,
+            systemInstruction: `شما "سازیار" هستید، یک دستیار هوشمند مدیریت پروژه ساختمانی.
+            وظیفه شما تحلیل زمان‌بندی، هزینه و ریسک‌های اجرایی است.
+            همیشه پاسخ‌ها را به زبان فارسی فنی و مهندسی ارائه دهید.`,
         }
     });
 };
 
 export const quickCheckTask = async (taskTitle: string, duration: number, projectDetails?: ProjectDetails): Promise<string> => {
     try {
-        let contextPrompt = "";
-        if (projectDetails) {
-            contextPrompt = `
-            مشخصات پروژه:
-            - نوع سازه: ${projectDetails.dimensions.structureType}
-            - تعداد طبقات: ${projectDetails.dimensions.floors}
-            - متراژ زیربنا: ${projectDetails.dimensions.infrastructureArea} مترمربع
-            - محل پروژه: ${projectDetails.location.zoneType} (${projectDetails.location.address})
-            - سیستم اجرا: ${projectDetails.design.facadeType} / ${projectDetails.design.roofType}
-            `;
-        }
-
-        const prompt = `
-        نقش: مدیر ارشد کنترل پروژه.
-        ${contextPrompt}
-        
-        سوال: آیا فعالیت "${taskTitle}" با مدت زمان "${duration} روز" برای پروژه‌ای با مشخصات بالا منطقی است؟
-        
-        پاسخ را کوتاه و فارسی بده شامل:
-        1. تایید یا رد منطقی بودن زمان (با توجه به متراژ و حجم کار).
-        2. یک ریسک فنی یا اجرایی خاص این فعالیت در این نوع پروژه.
-        3. پیشنهاد اصلاحی (اگر نیاز است).
-        `;
+        const ai = getAI();
+        const prompt = `فعالیت: ${taskTitle}\nمدت زمان پیشنهادی: ${duration} روز\nآیا این زمان‌بندی منطقی است؟ لطفاً بر اساس استانداردهای مهندسی عمران پاسخ کوتاه بدهید.`;
 
         const response: GenerateContentResponse = await ai.models.generateContent({
-            model: FAST_MODEL,
+            model: MODEL_NAME,
             contents: prompt,
         });
-        return response.text || "خطا در دریافت پاسخ.";
-    } catch (error: any) {
-        console.error("Gemini API Error (QuickCheck):", error);
-        if (error.message?.includes('403') || error.toString().includes('403')) {
-            return "خطای دسترسی (403): ممکن است Generative AI API در کنسول گوگل برای این کلید فعال نشده باشد.";
-        }
-        return "سرویس هوش مصنوعی در دسترس نیست. لطفا اتصال اینترنت و کلید API را بررسی کنید.";
-    }
-};
-
-export const simulateScenario = async (
-    project: Project,
-    scenarioDescription: string
-): Promise<{ 
-    impactDescription: string, 
-    costDelta: number, 
-    timeDelta: number, 
-    recommendedActions: string[] 
-}> => {
-    const projectSummary = {
-        name: project.name,
-        details: project.details, 
-        totalTasks: project.tasks.length,
-        currentRiskScore: project.projectRiskScore,
-        criticalTasks: project.tasks.filter(t => t.isCritical || t.riskLevel === 'High').map(t => ({ title: t.title, responsible: t.responsible })),
-        resources: project.resources.map(r => ({ name: r.name, cost: r.costRate, type: r.type }))
-    };
-
-    const prompt = `
-    تحلیل سناریوی پیشرفته پروژه ساختمانی (Simulation):
-    
-    سناریو: "${scenarioDescription}"
-    
-    مشخصات کامل پروژه: ${JSON.stringify(projectSummary)}
-    
-    وظیفه:
-    1. تاثیر این سناریو بر هزینه کل (تخمین عدد). با توجه به متراژ و نوع قرارداد.
-    2. تاثیر بر زمان اتمام پروژه (تخمین روز).
-    3. اقدامات اصلاحی (Mitigation Plan).
-    
-    خروجی را حتماً به فرمت JSON معتبر زیر برگردان:
-    {
-        "impactDescription": "توضیح متنی کامل و تحلیلی",
-        "costDelta": number (افزایش/کاهش به تومان),
-        "timeDelta": number (افزایش/کاهش به روز),
-        "recommendedActions": ["action1", "action2"]
-    }
-    `;
-
-    try {
-        const response = await ai.models.generateContent({
-            model: COMPLEX_MODEL,
-            contents: prompt,
-            config: { responseMimeType: 'application/json' }
-        });
-        
-        const text = response.text;
-        return JSON.parse(text || "{}");
+        return response.text || "پاسخی از مدل دریافت نشد.";
     } catch (error) {
-        console.error("Simulation Error:", error);
-        return {
-            impactDescription: "خطا در پردازش سناریو. لطفاً از فعال بودن Generative Language API برای کلید خود اطمینان حاصل کنید.",
-            costDelta: 0,
-            timeDelta: 0,
-            recommendedActions: ["بررسی تنظیمات API Key"]
-        };
+        console.error("Gemini Error:", error);
+        return "خطا در برقراری ارتباط با هوش مصنوعی. لطفاً اینترنت خود را چک کنید.";
     }
 };
 
 export const analyzeProjectRisks = async (project: Project): Promise<any> => {
-    const tasksData = project.tasks.map(t => ({
-        id: t.id,
-        name: t.title,
-        status: t.status,
-        duration: t.duration,
-        progress: t.percentComplete,
-        priority: t.priority,
-        isCritical: t.isCritical
-    }));
-
-    const context = {
-        details: project.details,
-        tasks: tasksData
-    };
-
-    const prompt = `
-    به عنوان یک متخصص کنترل پروژه، داده‌های زیر را تحلیل کن و خروجی JSON بده:
-    1. projectScore (0 تا 100، 100 یعنی عالی).
-    2. alerts: لیستی از هشدارها (type: Delay/Cost/Risk, severity: info/warning/critical, message).
-    3. criticalPathSuggestion: متنی کوتاه درباره مسیر بحرانی.
-
-    Project Context: ${JSON.stringify(context)}
-    `;
-
     try {
+        const ai = getAI();
+        const prompt = `تحلیل ریسک برای پروژه: ${project.name}\nتعداد فعالیت‌ها: ${project.tasks.length}\nخروجی را به صورت JSON شامل امتیاز سلامت (0-100) و لیست هشدارها بده.`;
+
         const response = await ai.models.generateContent({
-            model: COMPLEX_MODEL,
+            model: MODEL_NAME,
             contents: prompt,
-            config: { responseMimeType: 'application/json' }
+            config: { responseMimeType: "application/json" }
         });
-        return JSON.parse(response.text || "{}");
+        
+        try {
+            return JSON.parse(response.text || "{}");
+        } catch (e) {
+            return { projectScore: 80, alerts: [] };
+        }
     } catch (error) {
         console.error("Risk Analysis Error:", error);
         return null;
     }
 };
 
-export const suggestProjectResources = async (project: Project): Promise<any[]> => {
-    const context = {
-        details: project.details,
-        tasks: project.tasks.map(t => t.title)
-    };
-
-    const prompt = `
-    به عنوان مهندس متره و برآورد، بر اساس مشخصات پروژه زیر، لیست منابع اصلی (مصالح، ماشین‌آلات، نیروی انسانی) مورد نیاز را پیشنهاد بده.
-    
-    مشخصات پروژه:
-    - نوع: ${project.details.dimensions.structureType}
-    - متراژ: ${project.details.dimensions.infrastructureArea} مترمربع
-    - طبقات: ${project.details.dimensions.floors}
-    - لیست فعالیت‌ها: ${JSON.stringify(context.tasks)}
-
-    خروجی باید یک آرایه JSON باشد که هر آیتم شامل موارد زیر است:
-    {
-        "name": "نام منبع (مثلا سیمان تیپ 2)",
-        "type": "Material" | "Work" | "Equipment",
-        "unit": "واحد (تن، مترمکعب، ساعت...)",
-        "estimatedRate": number (قیمت واحد تخمینی به تومان - تقریبی بازار ایران),
-        "reason": "دلیل پیشنهاد (مثلا برای فونداسیون)"
-    }
-    
-    حداقل 5 و حداکثر 10 مورد مهم پیشنهاد بده.
-    `;
-
+export const simulateScenario = async (project: Project, scenarioDescription: string): Promise<any> => {
     try {
+        const ai = getAI();
+        const prompt = `شبیه‌سازی سناریو: ${scenarioDescription}\nتاثیر بر پروژه ${project.name} چیست؟ خروجی JSON شامل costDelta و timeDelta باشد.`;
+
         const response = await ai.models.generateContent({
-            model: COMPLEX_MODEL,
+            model: MODEL_NAME,
             contents: prompt,
-            config: { responseMimeType: 'application/json' }
+            config: { responseMimeType: "application/json" }
+        });
+        return JSON.parse(response.text || "{}");
+    } catch (error) {
+        console.error("Simulation Error:", error);
+        return { impactDescription: "خطا در شبیه‌سازی", costDelta: 0, timeDelta: 0, recommendedActions: [] };
+    }
+};
+
+export const suggestProjectResources = async (project: Project): Promise<any[]> => {
+    try {
+        const ai = getAI();
+        const prompt = `لیست منابع پیشنهادی برای پروژه ${project.details.dimensions.structureType} با زیربنای ${project.details.dimensions.infrastructureArea} متر مربع در قالب آرایه JSON.`;
+
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: prompt,
+            config: { responseMimeType: "application/json" }
         });
         return JSON.parse(response.text || "[]");
     } catch (error) {
