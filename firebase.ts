@@ -1,19 +1,22 @@
-import { initializeApp } from "firebase/app";
+import * as firebaseApp from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// استفاده از متغیر محیطی برای امنیت و جلوگیری از مسدود شدن توسط گیت‌هاب
+// این مقدار از فایل .env.local خوانده می‌شود
+const apiKey = process.env.API_KEY;
+
 const firebaseConfig = {
-  apiKey: "AIzaSyCf5NGycTd_K2ntf-Nd1uiWd7NfEFJVq28",
-  authDomain: "sazyarweb.firebaseapp.com",
-  projectId: "sazyarweb",
-  storageBucket: "sazyarweb.firebasestorage.app",
-  messagingSenderId: "196151116296",
-  appId: "1:196151116296:web:07e170fe1ec874ddd047bd"
+  apiKey: apiKey,
+  authDomain: "sazyarapp.firebaseapp.com",
+  projectId: "sazyarapp",
+  storageBucket: "sazyarapp.firebasestorage.app",
+  messagingSenderId: "200546815732",
+  appId: "1:200546815732:web:a3548a43e25cccac2a98a1"
 };
 
-// مقداردهی اولیه برنامه
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase
+const app = firebaseApp.initializeApp(firebaseConfig);
 
-// فقط دیتابیس نگه داشته می‌شود
+export const auth = getAuth(app);
 export const db = getFirestore(app);
-
-export default app;

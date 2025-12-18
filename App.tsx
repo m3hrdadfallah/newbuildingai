@@ -1,34 +1,45 @@
+
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './AuthContext';
-import ProtectedRoute from './ProtectedRoute';
-import { LandingPage } from './components/LandingPage';
-import { Login } from './components/Login';
-import { Dashboard } from './components/Dashboard';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { ProjectProvider } from './context/ProjectContext';
+import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/Layout';
+import { Dashboard } from './components/Dashboard';
+import { TasksPage } from './components/TasksPage';
+import { GanttChart } from './components/GanttChart';
+import { ScenarioSimulator } from './components/ScenarioSimulator';
+import { ProjectSpecs } from './components/ProjectSpecs';
+import { Reports } from './components/Reports';
+import { AIChat } from './components/AIChat';
+import { ResourcesPage } from './components/ResourcesPage';
+import { UpgradePage } from './components/UpgradePage';
+import { UserProfile } from './components/UserProfile';
 
 const App: React.FC = () => {
-  return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-
-          {/* Private Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              {/* سایر مسیرهای خصوصی */}
-            </Route>
-          </Route>
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
-  );
+    return (
+        <AuthProvider>
+            <ProjectProvider>
+                <Router>
+                    <Layout>
+                        <Routes>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/specs" element={<ProjectSpecs />} />
+                            <Route path="/tasks" element={<TasksPage />} />
+                            <Route path="/resources" element={<ResourcesPage />} />
+                            <Route path="/gantt" element={<GanttChart />} />
+                            <Route path="/reports" element={<Reports />} />
+                            <Route path="/simulation" element={<ScenarioSimulator />} />
+                            <Route path="/upgrade" element={<UpgradePage />} />
+                            <Route path="/profile" element={<UserProfile />} />
+                            <Route path="/payment/callback" element={<div className="p-10 text-center text-green-600 font-bold">پرداخت با موفقیت انجام شد. در حال بازگشت...</div>} />
+                        </Routes>
+                        <AIChat />
+                    </Layout>
+                </Router>
+            </ProjectProvider>
+        </AuthProvider>
+    );
 };
 
 export default App;
+    

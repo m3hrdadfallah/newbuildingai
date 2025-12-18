@@ -2,102 +2,202 @@
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { Project, Task, Resource, ProjectDetails } from '../types';
 
-/**
- * ایجاد نمونه SDK هوش مصنوعی سازیار
- * مطابق با استانداردهای گوگل جمنای
- */
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// مدل‌های پیشنهادی براساس نوع وظیفه
-const FLASH_MODEL = 'gemini-3-flash-preview';
-const PRO_MODEL = 'gemini-3-pro-preview';
+const COMPLEX_MODEL = 'gemini-2.5-flash';
+const FAST_MODEL = 'gemini-2.0-flash-lite';
 
 export const createChatSession = (): Chat => {
-    try {
-        // Fix: Use direct initialization with process.env.API_KEY as per guidelines
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        return ai.chats.create({
-            model: FLASH_MODEL,
-            config: {
-                systemInstruction: `شما "سازیار" هستید، دستیار هوشمند مهندسی ساخت و ساز. 
-                اطلاعات فنی پروژه شامل متراژ، نوع سازه و زمان‌بندی را در اختیار دارید. 
-                وظیفه شما راهنمایی در مورد استانداردهای نظام مهندسی، تحلیل تاخیرات و برآورد مصالح است.
-                پاسخ‌ها را فارسی، دقیق و حرفه‌ای ارائه دهید.`,
-            }
-        });
-    } catch (e) {
-        console.error("Failed to start AI session", e);
-        throw e;
-    }
+    return ai.chats.create({
+        model: COMPLEX_MODEL,
+        config: {
+            systemInstruction: `شما "مدیر هوشمند پروژه" هستید.
+            تخصص: مدیریت پیمان، شرایط عمومی پیمان، تحلیل تاخیرات، تعدیل و صورت وضعیت.
+            دسترسی به داده‌های پروژه شامل WBS، منابع، ابعاد پروژه، نوع قرارداد و پیشرفت واقعی دارید.
+            در تحلیل‌ها، نوع سازه، منطقه جغرافیایی و ریسک‌های مالی را همزمان در نظر بگیرید.`,
+        }
+    });
 };
 
 export const quickCheckTask = async (taskTitle: string, duration: number, projectDetails?: ProjectDetails): Promise<string> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `پروژه: ${projectDetails?.dimensions.structureType} - ${projectDetails?.dimensions.infrastructureArea} مترمربع.
-        فعالیت: "${taskTitle}" با زمان ${duration} روز. 
-        آیا این زمان‌بندی منطقی است؟ پاسخ در حداکثر ۲ جمله فارسی.`;
+        let contextPrompt = "";
+        if (projectDetails) {
+            contextPrompt = `
+            مشخصات پروژه:
+            - نوع سازه: ${projectDetails.dimensions.structureType}
+            - تعداد طبقات: ${projectDetails.dimensions.floors}
+            - متراژ زیربنا: ${projectDetails.dimensions.infrastructureArea} مترمربع
+            - محل پروژه: ${projectDetails.location.zoneType} (${projectDetails.location.address})
+            - سیستم اجرا: ${projectDetails.design.facadeType} / ${projectDetails.design.roofType}
+            `;
+        }
+
+        const prompt = `
+        نقش: مدیر ارشد کنترل پروژه.
+        ${contextPrompt}
+        
+        سوال: آیا فعالیت "${taskTitle}" با مدت زمان "${duration} روز" برای پروژه‌ای با مشخصات بالا منطقی است؟
+        
+        پاسخ را کوتاه و فارسی بده شامل:
+        1. تایید یا رد منطقی بودن زمان (با توجه به متراژ و حجم کار).
+        2. یک ریسک فنی یا اجرایی خاص این فعالیت در این نوع پروژه.
+        3. پیشنهاد اصلاحی (اگر نیاز است).
+        `;
 
         const response: GenerateContentResponse = await ai.models.generateContent({
-            model: FLASH_MODEL,
+            model: FAST_MODEL,
             contents: prompt,
         });
-        // Fix: Access .text property directly (not a method)
-        return response.text || "پاسخی دریافت نشد.";
-    } catch (error: any) {
-        console.error("AI Quick Check Error:", error);
-        return "سرویس هوش مصنوعی موقتاً در دسترس نیست یا کلید API محدود شده است.";
+        return response.text || "خطا در دریافت پاسخ.";
+    } catch (error) {
+        return "سرویس در دسترس نیست.";
     }
 };
 
+/**
+ * Section F: Full Scenario Simulation
+ */
+export const simulateScenario = async (
+    project: Project,
+    scenarioDescription: string
+): Promise<{ 
+    impactDescription: string, 
+    costDelta: number, 
+    timeDelta: number, 
+    recommendedActions: string[] 
+}> => {
+    const projectSummary = {
+        name: project.name,
+        details: project.details, // Include full details (Dimensions, Location, Contract etc.)
+        totalTasks: project.tasks.length,
+        currentRiskScore: project.projectRiskScore,
+        criticalTasks: project.tasks.filter(t => t.isCritical || t.riskLevel === 'High').map(t => ({ title: t.title, responsible: t.responsible })),
+        resources: project.resources.map(r => ({ name: r.name, cost: r.costRate, type: r.type }))
+    };
+
+    const prompt = `
+    تحلیل سناریوی پیشرفته پروژه ساختمانی (Simulation):
+    
+    سناریو: "${scenarioDescription}"
+    
+    مشخصات کامل پروژه: ${JSON.stringify(projectSummary)}
+    
+    وظیفه:
+    1. تاثیر این سناریو بر هزینه کل (تخمین عدد). با توجه به متراژ و نوع قرارداد.
+    2. تاثیر بر زمان اتمام پروژه (تخمین روز).
+    3. اقدامات اصلاحی (Mitigation Plan).
+    
+    خروجی را حتماً به فرمت JSON معتبر زیر برگردان:
+    {
+        "impactDescription": "توضیح متنی کامل و تحلیلی",
+        "costDelta": number (افزایش/کاهش به تومان),
+        "timeDelta": number (افزایش/کاهش به روز),
+        "recommendedActions": ["action1", "action2"]
+    }
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: COMPLEX_MODEL,
+            contents: prompt,
+            config: { responseMimeType: 'application/json' }
+        });
+        
+        const text = response.text;
+        return JSON.parse(text || "{}");
+    } catch (error) {
+        console.error("Simulation Error", error);
+        return {
+            impactDescription: "خطا در پردازش سناریو",
+            costDelta: 0,
+            timeDelta: 0,
+            recommendedActions: ["بررسی دستی سناریو"]
+        };
+    }
+};
+
+/**
+ * Section D & E: AI Risk Analysis & Alerts
+ */
 export const analyzeProjectRisks = async (project: Project): Promise<any> => {
-    try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `تحلیل ریسک برای پروژه ${project.name}. تعداد فعالیت‌ها: ${project.tasks.length}. 
-        خروجی را فقط به صورت JSON معتبر شامل امتیاز (projectScore) و لیست هشدارها (alerts) بده.`;
+    const tasksData = project.tasks.map(t => ({
+        id: t.id,
+        name: t.title,
+        status: t.status,
+        duration: t.duration,
+        progress: t.percentComplete,
+        priority: t.priority,
+        isCritical: t.isCritical
+    }));
 
+    // Pass project details to AI for better context (e.g. Structure Type affects risks)
+    const context = {
+        details: project.details,
+        tasks: tasksData
+    };
+
+    const prompt = `
+    به عنوان یک متخصص کنترل پروژه، داده‌های زیر را تحلیل کن و خروجی JSON بده:
+    1. projectScore (0 تا 100، 100 یعنی عالی).
+    2. alerts: لیستی از هشدارها (type: Delay/Cost/Risk, severity: info/warning/critical, message).
+    3. criticalPathSuggestion: متنی کوتاه درباره مسیر بحرانی.
+
+    Project Context: ${JSON.stringify(context)}
+    `;
+
+    try {
         const response = await ai.models.generateContent({
-            model: PRO_MODEL, // Use Pro model for complex analysis
+            model: COMPLEX_MODEL,
             contents: prompt,
-            config: { responseMimeType: "application/json" }
+            config: { responseMimeType: 'application/json' }
         });
-        // Fix: Use .text property
         return JSON.parse(response.text || "{}");
     } catch (error) {
-        console.error("Risk Analysis Error:", error);
-        return { projectScore: 70, alerts: [{type: 'Error', severity: 'warning', message: 'خطا در تحلیل هوشمند'}] };
+        console.error(error);
+        return null;
     }
 };
 
-export const simulateScenario = async (project: Project, scenarioDescription: string): Promise<any> => {
-    try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `سناریو: ${scenarioDescription}. تاثیر بر هزینه و زمان پروژه را در قالب JSON با فیلدهای costDelta و timeDelta و impactDescription برگردان.`;
-
-        const response = await ai.models.generateContent({
-            model: PRO_MODEL,
-            contents: prompt,
-            config: { responseMimeType: "application/json" }
-        });
-        // Fix: Use .text property
-        return JSON.parse(response.text || "{}");
-    } catch (error) {
-        return { impactDescription: "خطا در تحلیل سناریو", costDelta: 0, timeDelta: 0, recommendedActions: [] };
-    }
-};
-
+/**
+ * Resource Estimation
+ */
 export const suggestProjectResources = async (project: Project): Promise<any[]> => {
-    try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `لیست منابع پیشنهادی برای سازه ${project.details.dimensions.structureType} را به صورت آرایه JSON شامل name, type, unit, estimatedRate بده.`;
+    const context = {
+        details: project.details,
+        tasks: project.tasks.map(t => t.title)
+    };
 
+    const prompt = `
+    به عنوان مهندس متره و برآورد، بر اساس مشخصات پروژه زیر، لیست منابع اصلی (مصالح، ماشین‌آلات، نیروی انسانی) مورد نیاز را پیشنهاد بده.
+    
+    مشخصات پروژه:
+    - نوع: ${project.details.dimensions.structureType}
+    - متراژ: ${project.details.dimensions.infrastructureArea} مترمربع
+    - طبقات: ${project.details.dimensions.floors}
+    - لیست فعالیت‌ها: ${JSON.stringify(context.tasks)}
+
+    خروجی باید یک آرایه JSON باشد که هر آیتم شامل موارد زیر است:
+    {
+        "name": "نام منبع (مثلا سیمان تیپ 2)",
+        "type": "Material" | "Work" | "Equipment",
+        "unit": "واحد (تن، مترمکعب، ساعت...)",
+        "estimatedRate": number (قیمت واحد تخمینی به تومان - تقریبی بازار ایران),
+        "reason": "دلیل پیشنهاد (مثلا برای فونداسیون)"
+    }
+    
+    حداقل 5 و حداکثر 10 مورد مهم پیشنهاد بده.
+    `;
+
+    try {
         const response = await ai.models.generateContent({
-            model: PRO_MODEL,
+            model: COMPLEX_MODEL,
             contents: prompt,
-            config: { responseMimeType: "application/json" }
+            config: { responseMimeType: 'application/json' }
         });
-        // Fix: Use .text property
         return JSON.parse(response.text || "[]");
     } catch (error) {
+        console.error(error);
         return [];
     }
 };

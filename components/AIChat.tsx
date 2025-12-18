@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, X, Send, Loader2, Sparkles } from 'lucide-react';
 import { createChatSession } from '../services/geminiService';
@@ -14,26 +15,18 @@ export const AIChat: React.FC = () => {
     const chatSessionRef = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Initialize session lazily or on demand
-    const getSession = () => {
+    useEffect(() => {
         if (!chatSessionRef.current) {
-            try {
-                chatSessionRef.current = createChatSession();
-            } catch (e) {
-                console.error("Session creation failed", e);
-            }
+            chatSessionRef.current = createChatSession();
         }
-        return chatSessionRef.current;
-    };
+    }, []);
 
     useEffect(() => {
-        if (isOpen) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isOpen]);
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || !chatSessionRef.current) return;
 
         const userMsg: ChatMessage = {
             id: Date.now().toString(),
@@ -47,37 +40,20 @@ export const AIChat: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const session = getSession();
-            if (!session) {
-                throw new Error("SESSION_INIT_ERROR");
-            }
-            
-            const result = await session.sendMessage({ message: userMsg.text });
+            const result = await chatSessionRef.current.sendMessage({ message: userMsg.text });
             const responseText = result.text;
             
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: responseText || "پاسخی دریافت نشد.",
+                text: responseText,
                 timestamp: Date.now()
             }]);
-        } catch (error: any) {
-            console.error("Chat Error:", error);
-            
-            let errorMsg = 'متاسفانه خطایی در ارتباط با سرور رخ داد.';
-            
-            if (error.message?.includes('403') || error.toString().includes('403')) {
-                errorMsg = 'خطای دسترسی (403): کلید API شما اجازه استفاده از این مدل هوش مصنوعی را ندارد یا منقضی شده است.';
-            } else if (error.message?.includes('API_KEY_MISSING') || error.message === "SESSION_INIT_ERROR") {
-                errorMsg = 'تنظیمات کلید API ناقص است. لطفا فایل پیکربندی را چک کنید.';
-            } else if (error.message?.includes('fetch failed')) {
-                errorMsg = 'خطای شبکه: اتصال به سرویس گوگل برقرار نشد. لطفا اینترنت خود را بررسی کنید.';
-            }
-
+        } catch (error) {
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: errorMsg,
+                text: 'متاسفانه خطایی در ارتباط با سرور رخ داد.',
                 timestamp: Date.now()
             }]);
         } finally {

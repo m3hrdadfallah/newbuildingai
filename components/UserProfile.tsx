@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
-import { User, CheckCircle, AlertTriangle, Crown, Mail } from 'lucide-react';
+import { User, CheckCircle, AlertTriangle, CreditCard, Crown, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatJalaliDate } from '../utils/helpers';
 
@@ -13,27 +14,17 @@ export const UserProfile: React.FC = () => {
 
     const isPro = user.plan === 'Pro';
 
-    // Helper to get initials
-    const getInitials = () => {
-        if (user?.name && user.name !== 'کاربر جدید') return user.name.charAt(0);
-        if (user?.username) return user.username.charAt(0).toUpperCase();
-        return 'U';
-    };
-
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-20">
+        <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-2xl font-bold border-4 border-slate-800">
-                            {getInitials()}
+                            {user.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold">{user.name || 'کاربر'}</h2>
-                            <p className="text-slate-400 text-sm flex items-center gap-1 dir-ltr justify-end">
-                                <span>{user.email || user.username || 'No Email'}</span>
-                                <Mail className="w-3 h-3" />
-                            </p>
+                            <h2 className="text-xl font-bold">{user.name}</h2>
+                            <p className="text-slate-400 text-sm">@{user.username}</p>
                         </div>
                     </div>
                     <div className="text-right">
@@ -61,7 +52,7 @@ export const UserProfile: React.FC = () => {
                         <div className="flex justify-between items-center py-2">
                             <span className="text-gray-500 text-sm">سهمیه هوش مصنوعی (امروز)</span>
                             <span className="font-mono text-sm">
-                                {user.quota?.used || 0} / {user.quota?.limit || 20} درخواست
+                                {user.quota?.used} / {user.quota?.limit} درخواست
                             </span>
                         </div>
 
@@ -86,24 +77,20 @@ export const UserProfile: React.FC = () => {
                     {/* Account Settings */}
                     <div className="space-y-4">
                          <h3 className="font-bold text-gray-800 border-b pb-2">پروژه‌های فعال</h3>
-                         {currentProject ? (
-                            <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
-                                <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center text-blue-600">
-                                    <CheckCircle className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-sm text-gray-800">{currentProject.name || 'پروژه من'}</h4>
-                                    <p className="text-xs text-gray-500">{currentProject.tasks?.length || 0} فعالیت ثبت شده</p>
-                                </div>
-                            </div>
-                         ) : (
-                             <div className="text-sm text-gray-500">پروژه‌ای یافت نشد.</div>
-                         )}
+                         <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
+                             <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center text-blue-600">
+                                 <CheckCircle className="w-5 h-5" />
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-sm text-gray-800">{currentProject.name}</h4>
+                                 <p className="text-xs text-gray-500">{currentProject.tasks.length} فعالیت ثبت شده</p>
+                             </div>
+                         </div>
                     </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 border-t text-center">
-                    <button onClick={logout} className="text-red-500 text-sm hover:underline font-bold">
+                    <button onClick={logout} className="text-red-500 text-sm hover:underline">
                         خروج از حساب کاربری
                     </button>
                 </div>

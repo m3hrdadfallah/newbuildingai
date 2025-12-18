@@ -1,9 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
-import { logoutUser, MockUser } from './auth';
+import { auth, db } from './firebase';
+import { logoutUser } from './auth';
 
-interface UserData extends MockUser {
+interface UserData {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL?: string | null;
+  plan?: 'Free' | 'Pro';
   subscriptionExpiry?: string;
   quota?: {
     used: number;
@@ -28,45 +34,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const savedUser = localStorage.getItem('sazyar_user');
-      if (savedUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        let userData: UserData = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+          plan: 'Free',
+          name: firebaseUser.displayName || 'کاربر جدید',
+          username: firebaseUser.email?.split('@')[0] || 'user',
+          quota: { used: 0, limit: 20 }
+        };
+
         try {
-          const parsedUser = JSON.parse(savedUser) as MockUser;
-          let userData: UserData = {
-            ...parsedUser,
-            name: parsedUser.displayName,
-            username: parsedUser.email.split('@')[0],
-            quota: { used: 0, limit: 20 }
-          };
-
-          // تلاش برای دریافت متادیتای اضافی از Firestore (اختیاری)
-          try {
-            const userRef = doc(db, "users", parsedUser.uid);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-              userData = { ...userData, ...userSnap.data() };
-            } else {
-              await setDoc(userRef, userData, { merge: true });
-            }
-          } catch (e) {
-            console.warn("Firestore access skipped or failed (offline mode or permission issue)");
+          const userRef = doc(db, "users", firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists()) {
+            userData = { ...userData, ...userSnap.data() };
+          } else {
+            await setDoc(userRef, userData, { merge: true });
           }
-
           setUser(userData);
-        } catch (e) {
-          console.error("Auth initialization error:", e);
+        } catch (error) {
+          console.error("Firestore sync error:", error);
+          setUser(userData);
         }
+      } else {
+        setUser(null);
       }
       setLoading(false);
-    };
+    });
 
-    checkAuth();
+    return () => unsubscribe();
   }, []);
 
   const logout = async () => {
     await logoutUser();
-    setUser(null);
   };
 
   const handleMockPayment = async () => {
@@ -79,7 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscriptionExpiry: expiryDate.toISOString()
       };
       setUser(updatedUser);
-      localStorage.setItem('sazyar_user', JSON.stringify(updatedUser));
       
       try {
         const userRef = doc(db, "users", user.uid);

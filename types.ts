@@ -161,9 +161,7 @@ export interface ChatMessage {
 
 export interface User {
     id: string;
-    username: string; // Main display identifier
-    email?: string; // For Google/Email users
-    phoneNumber?: string; // For Phone users
+    username: string;
     role: 'Admin' | 'Manager' | 'Viewer';
     name: string;
     plan?: 'Free' | 'Pro';
@@ -172,11 +170,4 @@ export interface User {
         used: number;
         limit: number;
     };
-}
-
-export interface FileNode {
-    id: string;
-    name: string;
-    type: 'folder' | 'file';
-    children?: FileNode[];
 }
